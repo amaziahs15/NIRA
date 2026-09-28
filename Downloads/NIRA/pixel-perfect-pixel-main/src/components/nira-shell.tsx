@@ -9,6 +9,7 @@ import {
   Home,
   LogOut,
   Menu,
+  MessageSquare,
   Moon,
   ShieldCheck,
   Sun,
@@ -75,6 +76,7 @@ export function NiraShell({
     { key: "home", label: t(lang, "home"), icon: Home },
     { key: "case", label: t(lang, "my_case"), icon: FileHeart },
     { key: "checkin", label: t(lang, "check_in"), icon: ClipboardList },
+    { key: "messages", label: t(lang, "messages") ?? "Messages", icon: MessageSquare },
     { key: "support", label: t(lang, "support"), icon: HeartHandshake },
     { key: "profile", label: t(lang, "profile"), icon: UserRound },
   ];
@@ -331,7 +333,7 @@ export function NiraShell({
 
           {/* Bottom nav for victim (mobile) */}
           {role === "victim" && (
-            <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-surface/90 px-2 py-2 shadow-soft backdrop-blur-xl lg:hidden">
+            <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-line bg-surface/90 px-2 py-2 shadow-soft backdrop-blur-xl lg:hidden">
               {victimNav.map((item) => {
                 const Icon = item.icon;
                 return (

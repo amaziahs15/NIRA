@@ -19,11 +19,15 @@ serve(async (req: Request) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const hfToken = Deno.env.get("HUGGINGFACE_API_KEY") || Deno.env.get("HF_TOKEN");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const supabaseKey = serviceKey || anonKey;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: !serviceKey && authHeader ? { headers: { Authorization: authHeader } } : undefined,
+    });
 
     const body: ComputeScoreRequest = await req.json();
     const { checkin_id } = body;

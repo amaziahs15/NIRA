@@ -12,6 +12,7 @@ export const Route = createFileRoute("/admin")({
 
 function AdminApp() {
   const navigate = useNavigate();
+  const [userId, setUserId] = useState("");
   const [name, setName] = useState("Admin");
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<WorkspaceView>("home");
@@ -23,6 +24,7 @@ function AdminApp() {
     const role = await getNiraRole(user.id);
     if (role && role !== "admin") { await navigate({ to: `/${role}` }); return; }
     const profile = await getNiraProfile(user.id);
+    setUserId(user.id);
     setName(profile?.name ?? "Admin");
     setLoading(false);
   }, [navigate]);
@@ -45,7 +47,7 @@ function AdminApp() {
 
   return (
     <NiraShell role="admin" name={name} view={view} onView={setView}>
-      <AdminHome />
+      <AdminHome userId={userId} userName={name} />
     </NiraShell>
   );
 }

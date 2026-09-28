@@ -30,7 +30,7 @@ function ProfessionalApp() {
     const role = await getNiraRole(user.id);
     if (role && role !== "professional") { await navigate({ to: `/${role}` }); return; }
     const profile = await getNiraProfile(user.id);
-    setData({ userId: user.id, name: profile?.name ?? "Professional" });
+    setData({ userId: user.id, name: profile?.name ?? "Support Officer" });
     setLoading(false);
   }, [navigate]);
 
@@ -58,9 +58,22 @@ function ProfessionalApp() {
 
   const renderView = () => {
     if (view === "review" && reviewCaseId) {
-      return <ProfessionalReview caseId={reviewCaseId} userId={data.userId} onBack={() => setView("home")} />;
+      return (
+        <ProfessionalReview
+          caseId={reviewCaseId}
+          userId={data.userId}
+          userName={data.name}
+          onBack={() => setView("home")}
+        />
+      );
     }
-    return <ProfessionalHome userId={data.userId} onViewCase={handleViewCase} />;
+    return (
+      <ProfessionalHome
+        userId={data.userId}
+        userName={data.name}
+        onViewCase={handleViewCase}
+      />
+    );
   };
 
   return (

@@ -184,8 +184,8 @@ export default function VictimCheckin({ data, lang, onDone }: Props) {
         .from("voice-checkins")
         .upload(filename, audioBlob, { upsert: true, contentType: "audio/webm" });
       if (!uploadErr && uploadData) {
-        const { data: pubUrl } = supabase.storage.from("voice-checkins").getPublicUrl(filename);
-        voice_url = pubUrl?.publicUrl ?? null;
+        // Bucket is private — store the file path so createSignedUrl can be used
+        voice_url = filename;
       }
     }
 

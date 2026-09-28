@@ -39,6 +39,61 @@ export default function VictimProfile({ data, lang, onUpdate, onLanguageChange }
   const [loadingLogs, setLoadingLogs] = useState(true);
   const { theme, toggleTheme } = useTheme();
 
+  // Consent state
+  const [consentText, setConsentText] = useState(true);
+  const [consentVoice, setConsentVoice] = useState(true);
+  const [consentMonitoring, setConsentMonitoring] = useState(true);
+  const [consentLoaded, setConsentLoaded] = useState(false);
+  const [savingConsent, setSavingConsent] = useState(false);
+
+  // Consent: load from victims table
+  useEffect(() => {
+    if (!data.victimId) return;
+    supabase
+      .from("victims")
+      .select("consent_share_text, consent_share_voice, consent_wellbeing_monitoring")
+      .eq("id", data.victimId)
+      .single()
+      .then(({ data: v }) => {
+        if (v) {
+          setConsentText(v.consent_share_text ?? true);
+          setConsentVoice(v.consent_share_voice ?? true);
+          setConsentMonitoring(v.consent_wellbeing_monitoring ?? true);
+        }
+        setConsentLoaded(true);
+      });
+  }, [data.victimId]);
+
+  const handleSaveConsent = async () => {
+    if (!data.victimId) return;
+    setSavingConsent(true);
+    const { error } = await supabase
+      .from("victims")
+      .update({
+        consent_share_text: consentText,
+        consent_share_voice: consentVoice,
+        consent_wellbeing_monitoring: consentMonitoring,
+      })
+      .eq("id", data.victimId);
+    if (error) {
+      toast.error("Could not save consent preferences. Please try again.");
+    } else {
+      toast.success(t(lang, "consent_updated"));
+      // Log to audit
+      if (data.caseId) {
+        await supabase.from("audit_log").insert({
+          case_id: data.caseId,
+          actor_id: data.userId,
+          actor_name: data.name,
+          actor_role: "victim",
+          action: "Updated consent preferences",
+          details: `text=${consentText}, voice=${consentVoice}, monitoring=${consentMonitoring}`,
+        });
+      }
+    }
+    setSavingConsent(false);
+  };
+
   // Keep local language in sync if updated from header
   useEffect(() => {
     setLanguage(data.language);
@@ -200,42 +255,69 @@ export default function VictimProfile({ data, lang, onUpdate, onLanguageChange }
         </div>
       </div>
 
-      {/* Privacy toggles */}
+      {/* Privacy & Consent — Real toggles */}
       <div className="rounded-[22px] border border-line bg-surface/80 p-6 shadow-soft backdrop-blur-md">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-bold text-ink">Privacy & consent</h3>
+            <h3 className="text-sm font-bold text-ink">{t(lang, "consent_settings")}</h3>
             <p className="mt-0.5 text-xs text-muted-ink">
-              You maintain ownership of your signals at every stage.
+              You have full control. Changes take effect immediately for your professional.
             </p>
           </div>
-          <SoftBadge tone="brand" icon={<Shield className="size-3" />}>
-            Consent-driven
-          </SoftBadge>
+          <SoftBadge tone="brand" icon={<Shield className="size-3" />}>Consent-driven</SoftBadge>
         </div>
 
-        <div className="space-y-4">
-          {[
-            { id: "toggle-signals", label: "Share wellbeing signals with my professional", enabled: true },
-            { id: "toggle-voice", label: "Include voice notes in analysis", enabled: true },
-            { id: "toggle-patterns", label: "Allow pattern review for care planning", enabled: false },
-          ].map((t) => (
-            <div key={t.id} className="flex items-center justify-between">
-              <span className="text-xs text-muted-ink">{t.label}</span>
-              <div
-                id={t.id}
-                className={`relative h-5 w-9 cursor-pointer rounded-full transition ${t.enabled ? "bg-brand" : "bg-border"}`}
-              >
-                <div
-                  className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${t.enabled ? "left-4" : "left-0.5"}`}
-                />
+        {!consentLoaded ? (
+          <div className="py-4 text-xs text-muted-ink">Loading preferences…</div>
+        ) : (
+          <div className="space-y-4">
+            {([
+              {
+                id: "consent-toggle-text",
+                label: t(lang, "consent_share_text"),
+                value: consentText,
+                onChange: setConsentText,
+              },
+              {
+                id: "consent-toggle-voice",
+                label: t(lang, "consent_share_voice"),
+                value: consentVoice,
+                onChange: setConsentVoice,
+              },
+              {
+                id: "consent-toggle-monitoring",
+                label: t(lang, "consent_monitoring"),
+                value: consentMonitoring,
+                onChange: setConsentMonitoring,
+              },
+            ] as { id: string; label: string; value: boolean; onChange: (v: boolean) => void }[]).map((item) => (
+              <div key={item.id} className="flex items-center justify-between">
+                <span className="text-xs text-muted-ink max-w-[75%]">{item.label}</span>
+                <button
+                  id={item.id}
+                  type="button"
+                  role="switch"
+                  aria-checked={item.value}
+                  onClick={() => item.onChange(!item.value)}
+                  className={`relative h-5 w-9 cursor-pointer rounded-full transition-colors ${item.value ? "bg-brand" : "bg-line"}`}
+                >
+                  <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${item.value ? "left-4" : "left-0.5"}`} />
+                </button>
               </div>
+            ))}
+
+            <div className="pt-3 flex items-center justify-between border-t border-line/60">
+              <p className="text-[10px] text-muted-ink">These settings control what your assigned professional can access.</p>
+              <button
+                onClick={handleSaveConsent}
+                disabled={savingConsent}
+                className="rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white hover:bg-brand/90 disabled:opacity-50 transition"
+              >
+                {savingConsent ? "Saving…" : "Save preferences"}
+              </button>
             </div>
-          ))}
-        </div>
-        <p className="mt-4 text-[10px] text-muted-ink">
-          UI-only toggles in this demo. Full consent persistence is planned for the next release.
-        </p>
+          </div>
+        )}
       </div>
 
       {/* PS 26094: Access Log (Audit Log Table) for Consent Transparency */}

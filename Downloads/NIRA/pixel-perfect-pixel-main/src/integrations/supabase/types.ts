@@ -59,18 +59,30 @@ export type Database = {
           id: string
           profile_id: string
           case_id: string | null
+          consent_wellbeing_monitoring: boolean
+          consent_share_voice: boolean
+          consent_share_text: boolean
+          consent_updated_at: string
           created_at: string
         }
         Insert: {
           id?: string
           profile_id: string
           case_id?: string | null
+          consent_wellbeing_monitoring?: boolean
+          consent_share_voice?: boolean
+          consent_share_text?: boolean
+          consent_updated_at?: string
           created_at?: string
         }
         Update: {
           id?: string
           profile_id?: string
           case_id?: string | null
+          consent_wellbeing_monitoring?: boolean
+          consent_share_voice?: boolean
+          consent_share_text?: boolean
+          consent_updated_at?: string
           created_at?: string
         }
         Relationships: []
@@ -117,6 +129,8 @@ export type Database = {
           case_id: string
           event_type: string
           description: string
+          visible_to_victim: boolean
+          author_id: string | null
           occurred_at: string
         }
         Insert: {
@@ -124,6 +138,8 @@ export type Database = {
           case_id: string
           event_type?: string
           description: string
+          visible_to_victim?: boolean
+          author_id?: string | null
           occurred_at?: string
         }
         Update: {
@@ -131,6 +147,8 @@ export type Database = {
           case_id?: string
           event_type?: string
           description?: string
+          visible_to_victim?: boolean
+          author_id?: string | null
           occurred_at?: string
         }
         Relationships: []
@@ -348,6 +366,141 @@ export type Database = {
           action?: string
           details?: string | null
           occurred_at?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          id: string
+          case_id: string
+          sender_id: string | null
+          sender_role: "victim" | "professional"
+          body: string
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          case_id: string
+          sender_id?: string | null
+          sender_role: "victim" | "professional"
+          body: string
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string
+          sender_id?: string | null
+          sender_role?: "victim" | "professional"
+          body?: string
+          read_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      appointments: {
+        Row: {
+          id: string
+          case_id: string
+          scheduled_at: string
+          mode: "call" | "in_person" | "video"
+          status: "proposed" | "accepted" | "reschedule_requested" | "completed" | "cancelled"
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          case_id: string
+          scheduled_at: string
+          mode?: "call" | "in_person" | "video"
+          status?: "proposed" | "accepted" | "reschedule_requested" | "completed" | "cancelled"
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string
+          scheduled_at?: string
+          mode?: "call" | "in_person" | "video"
+          status?: "proposed" | "accepted" | "reschedule_requested" | "completed" | "cancelled"
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      safety_plans: {
+        Row: {
+          id: string
+          victim_id: string
+          trusted_contacts: Json
+          safe_places: Json
+          warning_signs: Json
+          coping_strategies: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          victim_id: string
+          trusted_contacts?: Json
+          safe_places?: Json
+          warning_signs?: Json
+          coping_strategies?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          victim_id?: string
+          trusted_contacts?: Json
+          safe_places?: Json
+          warning_signs?: Json
+          coping_strategies?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      case_notes: {
+        Row: {
+          id: string
+          case_id: string | null
+          victim_id: string | null
+          author_id: string | null
+          author_name: string
+          note: string
+          is_private: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          case_id?: string | null
+          victim_id?: string | null
+          author_id?: string | null
+          author_name?: string
+          note: string
+          is_private?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string | null
+          victim_id?: string | null
+          author_id?: string | null
+          author_name?: string
+          note?: string
+          is_private?: boolean
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }

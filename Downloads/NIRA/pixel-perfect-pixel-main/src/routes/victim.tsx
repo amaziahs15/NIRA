@@ -13,6 +13,7 @@ import VictimCase from "@/components/victim/VictimCase";
 import VictimSupport from "@/components/victim/VictimSupport";
 import VictimProfile from "@/components/victim/VictimProfile";
 import VictimChat from "@/components/victim/VictimChat";
+import VictimMessages from "@/components/victim/VictimMessages";
 import { WellbeingChatBubble } from "@/components/victim/WellbeingChatBubble";
 import type { ChatMsg } from "@/components/victim/WellbeingChatBubble";
 
@@ -132,6 +133,14 @@ function VictimApp() {
             initialMessages={chatMessages}
             onMessagesChange={setChatMessages}
             onLanguageChange={handleLanguageChange}
+          />
+        );
+      case "messages":
+        return (
+          <VictimMessages
+            victimId={data.victimId}
+            userId={data.userId}
+            lang={lang}
           />
         );
       default:
