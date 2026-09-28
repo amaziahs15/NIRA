@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Expand, MessageCircle, Mic, MicOff, Phone, Send, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { AlertTriangle, Copy, Expand, MessageCircle, Mic, MicOff, Phone, Send, Sparkles, Trash2, Volume2, VolumeX, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SoftBadge } from "@/components/nira-primitives";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ export interface ChatMsg {
   role: "user" | "assistant";
   content: string;
   isCrisis?: boolean;
+  timestamp?: string;
 }
 
 export interface WellbeingChatProps {
@@ -37,6 +38,7 @@ export function getDefaultGreeting(lang: string): ChatMsg {
     id: "initial-intro-greeting",
     role: "assistant",
     content,
+    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   };
 }
 
@@ -162,6 +164,9 @@ function MessageBubble({
           </button>
         )}
       </div>
+      {msg.timestamp && (
+        <span className="text-[10px] text-muted-ink px-1.5">{msg.timestamp}</span>
+      )}
       {msg.isCrisis && <CrisisCard lang={lang} victimId={victimId} />}
     </div>
   );
@@ -333,36 +338,90 @@ export function WellbeingChatView({
     }
   };
 
-  // If no messages at all, ensure greeting is shown
-  const displayMessages = messages.length === 0 ? [getDefaultGreeting(lang)] : messages;
+  // Check if any message flagged crisis
+  const hasCrisis = messages.some((m) => m.isCrisis);
+
+  const handleCopyChat = () => {
+    const text = displayMessages
+      .map((m) => `${m.role === "user" ? "You" : "NIRA"} (${m.timestamp || ""}):\n${m.content}`)
+      .join("\n\n");
+    navigator.clipboard.writeText(text);
+    toast.success("Conversation copied to clipboard.");
+  };
+
+  const handleClearChat = () => {
+    onMessagesChange?.([getDefaultGreeting(lang)]);
+    toast.info("Conversation reset.");
+  };
+
+  const quickReplies = [
+    "I feel a bit overwhelmed today",
+    "Can we do a breathing exercise?",
+    "What steps can I take right now?",
+    "I just need someone to talk to",
+  ];
 
   return (
     <div className={cn("flex flex-col bg-surface/90", compact ? "h-[450px]" : "h-full")}>
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-line bg-surface/80 px-4 py-3 backdrop-blur-xl">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-2.5">
-          <div className="grid size-7 place-items-center rounded-xl bg-brand text-white shadow-sm">
+          <div className="grid size-7 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <Sparkles className="size-3.5" />
           </div>
           <div>
-            <div className="text-xs font-bold text-ink">{t(lang, "chat_title")}</div>
-            <div className="text-[10px] text-muted-ink">{t(lang, "chat_ephemeral_notice")}</div>
+            <div className="text-xs font-bold text-text-primary">{t(lang, "chat_title")}</div>
+            <div className="text-[10px] text-text-muted">{t(lang, "chat_ephemeral_notice")}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleCopyChat}
+            title={t(lang, "chat_copy")}
+            className="rounded-lg p-1.5 text-text-muted transition hover:bg-primary-soft hover:text-primary"
+            aria-label="Copy conversation"
+          >
+            <Copy className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleClearChat}
+            title={t(lang, "chat_clear")}
+            className="rounded-lg p-1.5 text-text-muted transition hover:bg-danger/10 hover:text-danger"
+            aria-label="Clear conversation"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
           <SoftBadge tone="brand">AI companion</SoftBadge>
           {onExpand && (
             <button
               id="chat-bubble-expand"
               onClick={onExpand}
               title={t(lang, "chat_expand")}
-              className="rounded-lg p-1.5 text-muted-ink transition hover:bg-brand-soft hover:text-brand"
+              className="rounded-lg p-1.5 text-text-muted transition hover:bg-primary-soft hover:text-primary"
             >
               <Expand className="size-3.5" />
             </button>
           )}
         </div>
       </div>
+
+      {/* Persistent Crisis Banner */}
+      {hasCrisis && (
+        <div className="flex items-center justify-between border-b border-danger/25 bg-danger/10 px-4 py-2 text-xs text-danger">
+          <div className="flex items-center gap-1.5 font-bold">
+            <AlertTriangle className="size-3.5 shrink-0" />
+            <span>24/7 Crisis Help: 112 (Emergency) · 1091 (Women)</span>
+          </div>
+          <a
+            href="tel:112"
+            className="rounded-full bg-danger px-2.5 py-0.5 text-[10px] font-bold text-white shadow-xs hover:opacity-90"
+          >
+            Call 112
+          </a>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
@@ -382,17 +441,32 @@ export function WellbeingChatView({
 
       {/* Limit notice */}
       {atCap && (
-        <div className="shrink-0 border-t border-line bg-attention/8 px-4 py-2 text-center text-[11px] text-attention">
+        <div className="shrink-0 border-t border-border bg-attention/10 px-4 py-2 text-center text-[11px] text-attention font-medium">
           {t(lang, "chat_session_limit")}
+        </div>
+      )}
+
+      {/* Suggested Quick Replies */}
+      {!atCap && !loading && !input.trim() && displayMessages.length < 6 && (
+        <div className="flex flex-wrap gap-1.5 px-3 py-2 border-t border-border/60 bg-surface/60">
+          {quickReplies.map((qr, i) => (
+            <button
+              key={i}
+              onClick={() => onSend(qr)}
+              className="rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium text-text-secondary hover:border-primary/40 hover:bg-primary-soft hover:text-primary transition"
+            >
+              {qr}
+            </button>
+          ))}
         </div>
       )}
 
       {/* Input */}
       {!atCap && (
-        <div className="shrink-0 border-t border-line bg-surface/95 p-3 backdrop-blur-xl">
+        <div className="shrink-0 border-t border-border bg-surface p-3 backdrop-blur-xl">
           {isListening && (
-            <div className="mb-2 flex items-center gap-2 rounded-xl bg-priority/10 px-3 py-1.5 text-xs text-priority animate-pulse">
-              <span className="size-2 rounded-full bg-priority" />
+            <div className="mb-2 flex items-center gap-2 rounded-xl bg-danger/10 px-3 py-1.5 text-xs text-danger animate-pulse">
+              <span className="size-2 rounded-full bg-danger" />
               <span>Listening… speak clearly into your microphone</span>
             </div>
           )}
@@ -406,7 +480,7 @@ export function WellbeingChatView({
               maxLength={1000}
               placeholder={t(lang, "chat_placeholder")}
               disabled={loading}
-              className="flex-1 resize-none rounded-2xl border border-line bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-50"
+              className="flex-1 resize-none rounded-2xl border border-border bg-background px-4 py-2.5 text-sm text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               style={{ maxHeight: "100px", overflowY: "auto" }}
             />
 
@@ -421,8 +495,8 @@ export function WellbeingChatView({
               className={cn(
                 "grid size-10 shrink-0 place-items-center rounded-2xl border transition shadow-sm",
                 isListening
-                  ? "bg-priority text-white border-priority animate-pulse shadow-priority/30"
-                  : "bg-surface border-line text-muted-ink hover:text-brand hover:border-brand/40"
+                  ? "bg-danger text-white border-danger animate-pulse shadow-danger/30"
+                  : "bg-surface-elevated border-border text-text-muted hover:text-primary hover:border-primary/40"
               )}
             >
               {isListening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
@@ -433,7 +507,7 @@ export function WellbeingChatView({
               id="chat-send-btn"
               onClick={submit}
               disabled={!input.trim() || loading}
-              className="grid size-10 shrink-0 place-items-center rounded-2xl bg-brand text-white shadow-sm transition hover:bg-brand/90 disabled:opacity-40"
+              className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-40"
             >
               <Send className="size-4" />
             </button>

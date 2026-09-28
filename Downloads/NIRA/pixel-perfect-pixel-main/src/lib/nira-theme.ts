@@ -1,27 +1,40 @@
 import { useEffect, useState } from "react";
 
-export type Theme = "light" | "dark";
+export type Theme = "light" | "dark" | "system";
 
 const THEME_KEY = "nira_theme";
 
-export function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light";
-  const stored = localStorage.getItem(THEME_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
-    return "dark";
+export function getStoredTheme(): Theme {
+  if (typeof window === "undefined") return "system";
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === "light" || stored === "dark" || stored === "system") {
+      return stored;
+    }
+  } catch {
+    // ignore
   }
-  return "light";
+  return "system";
+}
+
+export function resolveIsDark(theme: Theme): boolean {
+  if (typeof window === "undefined") return false;
+  if (theme === "dark") return true;
+  if (theme === "light") return false;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
 }
 
 export function applyTheme(theme: Theme) {
   if (typeof document === "undefined") return;
+  const isDark = resolveIsDark(theme);
   const root = document.documentElement;
-  if (theme === "dark") {
+
+  if (isDark) {
     root.classList.add("dark");
   } else {
     root.classList.remove("dark");
   }
+
   try {
     localStorage.setItem(THEME_KEY, theme);
   } catch {
@@ -29,25 +42,37 @@ export function applyTheme(theme: Theme) {
   }
 }
 
-// Apply immediately on script execution to avoid flashing
-if (typeof window !== "undefined") {
-  applyTheme(getInitialTheme());
-}
-
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+  const [theme, setThemeState] = useState<Theme>(getStoredTheme);
+  const [isDark, setIsDark] = useState<boolean>(() => resolveIsDark(getStoredTheme()));
 
   useEffect(() => {
     applyTheme(theme);
+    setIsDark(resolveIsDark(theme));
+
+    if (theme === "system" && typeof window !== "undefined") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = () => {
+        applyTheme("system");
+        setIsDark(resolveIsDark("system"));
+      };
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
   }, [theme]);
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === "light" ? "dark" : "light"));
+    // Cycles: light -> dark -> system -> light
+    setThemeState((prev) => {
+      if (prev === "light") return "dark";
+      if (prev === "dark") return "system";
+      return "light";
+    });
   };
 
   const setTheme = (next: Theme) => {
     setThemeState(next);
   };
 
-  return { theme, toggleTheme, setTheme };
+  return { theme, isDark, toggleTheme, setTheme };
 }

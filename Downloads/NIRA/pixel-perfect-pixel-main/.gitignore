@@ -16,9 +16,10 @@ dist-ssr
 .nitro
 *.local
 
-# Wrangler / Cloudflare
+# Wrangler / Cloudflare / Netlify
 .wrangler/
 .dev.vars
+.netlify/
 
 # Environment variables — never commit secrets
 .env

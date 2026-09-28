@@ -32,8 +32,15 @@ export function NiraMark({ compact = false }: { compact?: boolean }) {
 }
 
 export function SoftBadge({ children, tone = "brand", icon }: { children: React.ReactNode; tone?: "brand" | "stable" | "improving" | "attention" | "priority" | "uncertain"; icon?: React.ReactNode }) {
-  const styles = { brand: "bg-brand-soft text-brand", stable: "bg-stable/12 text-stable", improving: "bg-improving/12 text-improving", attention: "bg-attention/12 text-attention", priority: "bg-priority/12 text-priority", uncertain: "bg-uncertain/12 text-uncertain" };
-  return <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold", styles[tone])}>{icon ?? <span className="size-1.5 rounded-full bg-current" />}{children}</span>;
+  const styles = {
+    brand: "bg-[#E3EFE9] text-[#134E48] dark:bg-[#113833] dark:text-[#5EEAD4]",
+    stable: "bg-[#E0F2FE] text-[#075985] dark:bg-[#0C4A6E] dark:text-[#BAE6FD]",
+    improving: "bg-[#DCFCE7] text-[#166534] dark:bg-[#064E3B] dark:text-[#A7F3D0]",
+    attention: "bg-[#FEF3C7] text-[#92400E] dark:bg-[#382405] dark:text-[#FDE68A]",
+    priority: "bg-[#FFE4E6] text-[#9F1239] dark:bg-[#3F1219] dark:text-[#FECDD3]",
+    uncertain: "bg-[#EEF2FF] text-[#3730A3] dark:bg-[#1E1B4B] dark:text-[#C7D2FE]",
+  };
+  return <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-tight", styles[tone])}>{icon ?? <span className="size-1.5 rounded-full bg-current" />}{children}</span>;
 }
 
 export function ClosedLoop({ compact = false }: { compact?: boolean }) {

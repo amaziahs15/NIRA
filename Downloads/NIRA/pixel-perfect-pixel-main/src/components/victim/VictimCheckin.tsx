@@ -45,18 +45,80 @@ export default function VictimCheckin({ data, lang, onDone }: Props) {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       if (audioUrl) URL.revokeObjectURL(audioUrl);
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (audioCtxRef.current) {
+        try { audioCtxRef.current.close(); } catch {}
+      }
     };
   }, [audioUrl]);
+
+  const drawWaveform = (analyser: AnalyserNode) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const render = () => {
+      animFrameRef.current = requestAnimationFrame(render);
+      analyser.getByteFrequencyData(dataArray);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const barWidth = (canvas.width / 32);
+      let x = 0;
+
+      for (let i = 0; i < 32; i++) {
+        // Average a slice of frequencies for each bar
+        const sliceIndex = Math.floor((i * bufferLength) / 32);
+        const val = dataArray[sliceIndex] / 255.0;
+        const barHeight = Math.max(4, val * canvas.height * 0.9);
+
+        // Gradient bar
+        const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+        gradient.addColorStop(0, "rgba(45, 212, 191, 0.4)");
+        gradient.addColorStop(1, "rgba(20, 184, 166, 0.95)");
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.roundRect(x, (canvas.height - barHeight) / 2, barWidth - 3, barHeight, 4);
+        ctx.fill();
+
+        x += barWidth;
+      }
+    };
+
+    render();
+  };
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mr = new MediaRecorder(stream);
       chunksRef.current = [];
+
+      // Setup Web Audio Analyser for live waveform
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
+        audioCtxRef.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 128;
+        source.connect(analyser);
+        drawWaveform(analyser);
+      } catch (e) {
+        console.error("AudioContext error", e);
+      }
+
       mr.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
@@ -65,6 +127,11 @@ export default function VictimCheckin({ data, lang, onDone }: Props) {
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach((t) => t.stop());
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        if (audioCtxRef.current) {
+          try { audioCtxRef.current.close(); } catch {}
+          audioCtxRef.current = null;
+        }
       };
       mr.start();
       mediaRecorderRef.current = mr;
@@ -350,35 +417,60 @@ export default function VictimCheckin({ data, lang, onDone }: Props) {
         />
       </div>
 
-      {/* Voice recording */}
-      <div className="rounded-[22px] border border-line bg-surface/80 p-5 shadow-soft backdrop-blur-md">
-        <div className="text-xs font-semibold text-ink mb-3">
-          Voice note <span className="font-normal text-muted-ink">(optional)</span>
+      {/* Voice recording with live waveform */}
+      <div className="rounded-[22px] border border-border bg-surface p-5 shadow-soft backdrop-blur-md">
+        <div className="text-xs font-semibold text-text-primary mb-3">
+          Voice note <span className="font-normal text-text-muted">(optional)</span>
         </div>
-        <div className="flex items-center gap-4">
-          <button
-            id="checkin-mic"
-            type="button"
-            onClick={recording ? stopRecording : startRecording}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-              recording
-                ? "bg-priority/10 text-priority border border-priority/30"
-                : "bg-brand-soft text-brand border border-brand/20"
-            }`}
-          >
-            {recording ? (
-              <>
-                <MicOff className="size-4 animate-pulse" /> Stop recording
-              </>
-            ) : (
-              <>
-                <Mic className="size-4" /> Record voice note
-              </>
-            )}
-          </button>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+            <button
+              id="checkin-mic"
+              type="button"
+              onClick={recording ? stopRecording : startRecording}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                recording
+                  ? "bg-danger/10 text-danger border border-danger/30"
+                  : "bg-primary-soft text-primary border border-primary/20 hover:opacity-90"
+              }`}
+            >
+              {recording ? (
+                <>
+                  <MicOff className="size-4 animate-pulse" /> Stop recording
+                </>
+              ) : (
+                <>
+                  <Mic className="size-4" /> Record voice note
+                </>
+              )}
+            </button>
 
-          {audioUrl && !recording && (
-            <audio controls src={audioUrl} className="h-9 flex-1" />
+            {recording && (
+              <span className="flex items-center gap-2 text-xs font-semibold text-danger animate-pulse">
+                <span className="size-2 rounded-full bg-danger" />
+                Live recording in progress…
+              </span>
+            )}
+
+            {audioUrl && !recording && (
+              <audio controls src={audioUrl} className="h-9 flex-1" />
+            )}
+          </div>
+
+          {/* Live Waveform Canvas */}
+          {recording && (
+            <div className="rounded-xl border border-primary/30 bg-surface-elevated p-3 shadow-inner">
+              <div className="mb-1.5 flex items-center justify-between text-[11px] text-text-muted">
+                <span>Microphone Live Frequency</span>
+                <span className="text-primary font-bold">Sound Waves</span>
+              </div>
+              <canvas
+                ref={canvasRef}
+                width={360}
+                height={50}
+                className="h-12 w-full rounded-lg bg-background"
+              />
+            </div>
           )}
         </div>
       </div>

@@ -1,5 +1,20 @@
-import { useEffect, useState } from "react";
-import { BarChart3, ClipboardList, FileHeart, HeartHandshake, Home, LogOut, Menu, Moon, ShieldCheck, Sun, UserRound, X } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import {
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  FileHeart,
+  HeartHandshake,
+  Home,
+  LogOut,
+  Menu,
+  Moon,
+  ShieldCheck,
+  Sun,
+  UserRound,
+  X,
+} from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { NiraMark, SoftBadge } from "@/components/nira-primitives";
@@ -32,8 +47,28 @@ export function NiraShell({
   children: React.ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("nira_sidebar_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("nira_sidebar_collapsed", String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   // Nav items for victim — labels come from i18n
   const victimNav: { key: WorkspaceView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -62,6 +97,23 @@ export function NiraShell({
     await navigate({ to: "/" });
   };
 
+  // Resolve dignified display name and avatar initials
+  const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+  const friendlyName = useMemo(() => {
+    if (!name || isUuid(name) || name === "Professional" || name === "Victim") {
+      if (role === "victim") return "Community Member";
+      if (role === "professional") return "Support Officer";
+      return "Administrator";
+    }
+    return name;
+  }, [name, role]);
+
+  const initials = useMemo(() => {
+    const parts = friendlyName.trim().split(/\s+/);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return friendlyName.slice(0, 2).toUpperCase();
+  }, [friendlyName]);
+
   // Header text — victim header uses i18n
   const headerSubtitle =
     role === "victim"
@@ -74,14 +126,14 @@ export function NiraShell({
   const greetKey = hour < 12 ? "greeting" : hour < 17 ? "greeting_afternoon" : "greeting_evening";
   const headerTitle =
     role === "victim"
-      ? `${t(lang, greetKey)}, ${name || "there"}`
+      ? `${t(lang, greetKey)}, ${friendlyName}`
       : role === "professional"
       ? "A clear view for human review"
       : "A wider view, without individual details";
 
   return (
     <div className="min-h-screen bg-background text-ink transition-colors duration-200">
-      {/* Background blobs */}
+      {/* Background soft ambient blobs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="nira-drift absolute -left-32 -top-40 size-[520px] rounded-full bg-brand/8 blur-3xl" />
         <div className="nira-drift-reverse absolute right-0 top-24 size-[600px] rounded-full bg-sage/15 blur-3xl" />
@@ -91,12 +143,14 @@ export function NiraShell({
         {/* Sidebar */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-40 w-64 border-r border-line bg-surface/90 p-5 shadow-soft backdrop-blur-xl transition-transform lg:static lg:translate-x-0",
-            menuOpen ? "translate-x-0" : "-translate-x-full"
+            "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface/90 p-4 shadow-soft backdrop-blur-xl transition-all duration-300 lg:static lg:translate-x-0",
+            collapsed ? "lg:w-20" : "lg:w-64",
+            menuOpen ? "w-64 translate-x-0" : "-translate-x-full"
           )}
         >
+          {/* Logo & close button */}
           <div className="flex items-center justify-between">
-            <NiraMark compact />
+            <NiraMark compact={collapsed} />
             <button
               aria-label="Close navigation"
               onClick={() => setMenuOpen(false)}
@@ -106,40 +160,85 @@ export function NiraShell({
             </button>
           </div>
 
-          <div className="mt-8 rounded-2xl bg-brand-soft/60 p-4">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">Signed in as</div>
-            <div className="mt-1 text-sm font-bold text-ink">{name || "NIRA member"}</div>
-            <SoftBadge tone="brand">
-              {role === "victim" ? "Victim space" : role === "professional" ? "Support professional" : "Admin view"}
-            </SoftBadge>
+          {/* User profile card */}
+          <div
+            className={cn(
+              "mt-6 rounded-2xl bg-brand-soft/60 p-3 transition-all",
+              collapsed ? "flex justify-center" : "flex items-center gap-3"
+            )}
+          >
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand text-xs font-bold text-white shadow-xs">
+              {initials}
+            </div>
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">Signed in as</div>
+                <div className="truncate text-xs font-bold text-ink">{friendlyName}</div>
+                <div className="mt-0.5">
+                  <SoftBadge tone="brand">
+                    {role === "victim" ? "Victim space" : role === "professional" ? "Support officer" : "Admin view"}
+                  </SoftBadge>
+                </div>
+              </div>
+            )}
           </div>
 
-          <nav className="mt-8 space-y-1">
+          {/* Navigation Links */}
+          <nav className="mt-6 flex-1 space-y-1">
             {nav.map((item) => {
               const Icon = item.icon;
+              const isActive = view === item.key;
               return (
                 <button
                   key={item.key}
                   onClick={() => onView(item.key)}
+                  title={collapsed ? item.label : undefined}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition",
-                    view === item.key ? "bg-brand-soft text-brand" : "text-muted-ink hover:bg-background hover:text-ink"
+                    isActive
+                      ? "bg-brand-soft text-brand font-bold shadow-xs"
+                      : "text-muted-ink hover:bg-background hover:text-ink",
+                    collapsed && "justify-center px-0"
                   )}
                 >
-                  <Icon className="size-4" />
-                  {item.label}
+                  <Icon className="size-4 shrink-0" />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
                 </button>
               );
             })}
           </nav>
 
-          <div className="mt-auto pt-8">
+          {/* Desktop Collapse Toggle & Sign Out */}
+          <div className="mt-auto space-y-1 border-t border-line/60 pt-4">
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className={cn(
+                "hidden w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-muted-ink hover:bg-background hover:text-ink lg:flex transition",
+                collapsed && "justify-center px-0"
+              )}
+            >
+              {collapsed ? (
+                <ChevronRight className="size-4" />
+              ) : (
+                <>
+                  <ChevronLeft className="size-4" />
+                  <span>Collapse sidebar</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={signOut}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-muted-ink hover:bg-background hover:text-ink"
+              title={collapsed ? "Sign out" : undefined}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-muted-ink hover:bg-background hover:text-ink transition",
+                collapsed && "justify-center px-0"
+              )}
             >
-              <LogOut className="size-4" />
-              Sign out
+              <LogOut className="size-4 shrink-0" />
+              {!collapsed && <span>Sign out</span>}
             </button>
           </div>
         </aside>
@@ -168,7 +267,7 @@ export function NiraShell({
                 <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-ink">
                   {headerSubtitle}
                 </div>
-                <h1 className="mt-1 text-base sm:text-lg font-bold tracking-tight text-ink">{headerTitle}</h1>
+                <h1 className="mt-0.5 text-base sm:text-lg font-bold tracking-tight text-ink">{headerTitle}</h1>
               </div>
             </div>
 
@@ -218,7 +317,7 @@ export function NiraShell({
                 </SoftBadge>
                 <button
                   onClick={signOut}
-                  className="rounded-full border border-line bg-surface/70 p-2.5 text-muted-ink hover:bg-surface"
+                  className="rounded-full border border-line bg-surface/70 p-2.5 text-muted-ink hover:bg-surface transition"
                   aria-label="Sign out"
                 >
                   <LogOut className="size-4" />

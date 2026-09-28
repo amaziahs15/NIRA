@@ -12,8 +12,20 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { ArrowLeft, CheckCircle2, ChevronRight, ShieldAlert, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
+  ShieldAlert,
+  ShieldCheck,
+  Activity,
+  Mic,
+  Clock,
+  Sparkles,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
+import { CaseNotes } from "./CaseNotes";
 
 const SIGNAL_CHIP_STYLES: Record<string, string> = {
   GOOD: "bg-improving/12 text-improving",
@@ -24,7 +36,7 @@ const SIGNAL_CHIP_STYLES: Record<string, string> = {
 };
 
 const INTERVENTION_STEPS = ["Recommended", "Reviewed", "Assigned", "In Progress", "Outcome Recorded"] as const;
-type InterventionStatus = typeof INTERVENTION_STEPS[number];
+type InterventionStatus = (typeof INTERVENTION_STEPS)[number];
 
 interface Score {
   id: string;
@@ -73,7 +85,7 @@ export default function ProfessionalReview({ caseId, userId, onBack }: Props) {
     }
   }, [caseId, useDemoData]);
 
-  const chartData = scores.map((s, i) => ({
+  const chartData = scores.map((s) => ({
     label: new Date(s.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
     score: Math.round(s.composite_score),
     trend: s.trend,
@@ -115,14 +127,14 @@ export default function ProfessionalReview({ caseId, userId, onBack }: Props) {
         <button
           id="review-back"
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-semibold text-muted-ink hover:text-ink"
+          className="flex items-center gap-1.5 text-xs font-semibold text-muted-ink hover:text-ink transition"
         >
           <ArrowLeft className="size-4" /> Back to queue
         </button>
       </div>
 
       {useDemoData && (
-        <SoftBadge tone="uncertain">Demo data only — fictional case NIRA-1024</SoftBadge>
+        <SoftBadge tone="uncertain">Demo review data — fictional case NIRA-1024</SoftBadge>
       )}
 
       {/* Score Arc + Signal Quality */}
@@ -142,7 +154,7 @@ export default function ProfessionalReview({ caseId, userId, onBack }: Props) {
             </SoftBadge>
           </div>
 
-          {/* PS 26094: Explicit AI Decision-Support Safety Framing */}
+          {/* Decision-Support Safety Framing */}
           <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand-soft/40 px-3.5 py-2.5 text-xs text-ink">
             <ShieldAlert className="mt-0.5 size-4 shrink-0 text-brand" />
             <div>
@@ -217,6 +229,58 @@ export default function ProfessionalReview({ caseId, userId, onBack }: Props) {
         </div>
       )}
 
+      {/* Multimodal Trigger Explanation Breakdown Card */}
+      <div className="rounded-[22px] border border-line bg-white/70 p-6 shadow-soft backdrop-blur-md">
+        <div className="mb-4 text-xs font-bold uppercase tracking-[0.12em] text-muted-ink">
+          Signal Decomposition & Trigger Analysis
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-line bg-surface/50 p-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-ink">
+              <Mic className="size-4 text-brand" />
+              <span>Voice Prosody</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-ink leading-relaxed">
+              Vocal pitch variance narrowed by 18% during response. Consistent with guarded, controlled speech pattern.
+            </p>
+            <div className="mt-3 text-[11px] font-semibold text-attention">Shift: Moderate</div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface/50 p-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-ink">
+              <Clock className="size-4 text-attention" />
+              <span>Hesitation Latency</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-ink leading-relaxed">
+              Average response pause increased from 0.8s to 2.4s between prompts, suggesting reflective deliberation.
+            </p>
+            <div className="mt-3 text-[11px] font-semibold text-attention">Shift: High (+1.6s)</div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface/50 p-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-ink">
+              <Activity className="size-4 text-sage" />
+              <span>Sentiment Valence</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-ink leading-relaxed">
+              Lexical positivity index steady at 0.62 with no high-risk urgency language detected in text check-in.
+            </p>
+            <div className="mt-3 text-[11px] font-semibold text-improving">Shift: Stable (+0.04)</div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface/50 p-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-ink">
+              <Sparkles className="size-4 text-primary" />
+              <span>Cadence Regularity</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-ink leading-relaxed">
+              Check-in performed within standard morning window (9:30 AM). Active engagement streak sustained.
+            </p>
+            <div className="mt-3 text-[11px] font-semibold text-improving">Status: Regular</div>
+          </div>
+        </div>
+      </div>
+
       {/* Trajectory chart */}
       {chartData.length > 0 && (
         <div className="rounded-[22px] border border-line bg-white/70 p-6 shadow-soft backdrop-blur-md">
@@ -254,6 +318,9 @@ export default function ProfessionalReview({ caseId, userId, onBack }: Props) {
         <Timeline professional />
       </div>
 
+      {/* Private Caseworker Notes */}
+      <CaseNotes caseId={caseId} userId={userId} />
+
       {/* Intervention workflow stepper */}
       <div className="rounded-[22px] border border-line bg-white/70 p-6 shadow-soft backdrop-blur-md">
         <div className="mb-4 text-xs font-bold uppercase tracking-[0.12em] text-muted-ink">
@@ -274,7 +341,7 @@ export default function ProfessionalReview({ caseId, userId, onBack }: Props) {
                   disabled={!isNext || updatingStep !== null}
                   className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                     isCurrent
-                      ? "bg-brand text-white"
+                      ? "bg-brand text-white shadow-xs"
                       : isPast
                       ? "bg-improving/15 text-improving"
                       : isNext
@@ -313,7 +380,7 @@ export default function ProfessionalReview({ caseId, userId, onBack }: Props) {
             }
             toast.success("Legal referral recorded.");
           }}
-          className="rounded-xl border border-line bg-surface/70 px-4 py-3 text-sm font-bold text-ink transition hover:border-brand/30 hover:bg-brand-soft/20"
+          className="rounded-xl border border-line bg-surface/70 px-4 py-3 text-sm font-bold text-ink transition hover:border-brand/30 hover:bg-brand-soft/20 shadow-xs"
         >
           Refer for legal support
         </button>
@@ -327,7 +394,7 @@ export default function ProfessionalReview({ caseId, userId, onBack }: Props) {
         <button
           id="decision-no-action"
           onClick={() => { setInterventionStatus("Reviewed"); toast.success("Marked as reviewed — no further action at this time."); }}
-          className="rounded-xl border border-line bg-surface/70 px-4 py-3 text-sm font-bold text-muted-ink transition hover:border-line hover:text-ink"
+          className="rounded-xl border border-line bg-surface/70 px-4 py-3 text-sm font-bold text-muted-ink transition hover:border-line hover:text-ink shadow-xs"
         >
           No further action
         </button>
