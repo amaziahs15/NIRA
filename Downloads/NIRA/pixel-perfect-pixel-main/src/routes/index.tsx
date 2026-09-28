@@ -45,11 +45,13 @@ function LandingPage() {
 
             {/* Hero logo */}
             <div className="mx-auto mt-8 flex justify-center">
-              <img
-                src="/nira-logo.png"
-                alt="NIRA — Understand change. Explain risk. Connect support."
-                className="h-40 w-40 sm:h-52 sm:w-52 rounded-3xl object-contain shadow-xl shadow-brand/10 ring-1 ring-brand/10"
-              />
+              <div className="overflow-hidden rounded-3xl bg-[#F7F8F5] p-3 shadow-xl shadow-brand/10 ring-1 ring-brand/15">
+                <img
+                  src="/nira-logo.png"
+                  alt="NIRA — Understand change. Explain risk. Connect support."
+                  className="h-36 w-36 sm:h-48 sm:w-48 object-contain"
+                />
+              </div>
             </div>
 
             <h1 className="mx-auto mt-8 max-w-3xl text-4xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-6xl">

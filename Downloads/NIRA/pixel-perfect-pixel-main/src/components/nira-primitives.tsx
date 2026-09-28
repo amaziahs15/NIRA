@@ -7,16 +7,20 @@ import { contributionBars, demoTimeline, demoTrend } from "@/lib/nira-demo";
 export function NiraMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <img
-        src="/nira-mark.png"
-        alt="NIRA mark"
-        width={compact ? 36 : 44}
-        height={compact ? 36 : 44}
+      <div
         className={cn(
-          "rounded-xl object-contain shadow-sm",
+          "flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#F7F8F5] p-0.5 shadow-xs border border-brand/10",
           compact ? "size-9" : "size-11"
         )}
-      />
+      >
+        <img
+          src="/nira-mark.png"
+          alt="NIRA mark"
+          width={compact ? 36 : 44}
+          height={compact ? 36 : 44}
+          className="size-full rounded-[10px] object-contain"
+        />
+      </div>
       {!compact && (
         <div className="leading-none">
           <div className="text-[15px] font-extrabold tracking-tight text-ink">NIRA</div>

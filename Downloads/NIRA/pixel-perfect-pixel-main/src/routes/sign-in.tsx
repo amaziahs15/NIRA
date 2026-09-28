@@ -64,11 +64,13 @@ function SignInPage() {
 
       <div className="relative z-10 w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3">
-          <img
-            src="/nira-logo.png"
-            alt="NIRA"
-            className="h-24 w-24 rounded-2xl object-contain shadow-lg shadow-brand/10"
-          />
+          <div className="overflow-hidden rounded-2xl bg-[#F7F8F5] p-2 shadow-lg shadow-brand/10 ring-1 ring-brand/15">
+            <img
+              src="/nira-logo.png"
+              alt="NIRA"
+              className="h-24 w-24 object-contain"
+            />
+          </div>
         </div>
 
         <div className="rounded-[26px] border border-line bg-white/80 p-7 shadow-soft backdrop-blur-xl">
