@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getNiraRole, roleHome } from "@/lib/nira-auth";
-import { NiraMark, SafetyNotice, SoftBadge } from "@/components/nira-primitives";
+import { SafetyNotice, SoftBadge } from "@/components/nira-primitives";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/sign-up")({
@@ -106,8 +106,12 @@ function SignUpPage() {
       </div>
 
       <div className="relative z-10 w-full max-w-md">
-        <div className="mb-8 flex justify-center">
-          <NiraMark />
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <img
+            src="/nira-logo.png"
+            alt="NIRA"
+            className="h-24 w-24 rounded-2xl object-contain shadow-lg shadow-brand/10"
+          />
         </div>
 
         <div className="rounded-[26px] border border-line bg-white/80 p-7 shadow-soft backdrop-blur-xl">

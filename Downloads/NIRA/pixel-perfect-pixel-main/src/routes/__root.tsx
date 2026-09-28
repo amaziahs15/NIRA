@@ -48,12 +48,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NIRA — Wellbeing, gently" },
+      { title: "NIRA — Understand change. Explain risk. Connect support." },
       { name: "description", content: "A consent-driven, case-aware platform for longitudinal wellbeing support." },
       { name: "author", content: "NIRA" },
-      { property: "og:title", content: "NIRA — Wellbeing, gently" },
+      { property: "og:title", content: "NIRA — Understand change. Explain risk. Connect support." },
       { property: "og:description", content: "Understand change. Explain risk. Connect support." },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "/nira-logo.png" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -61,7 +62,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      // NIRA favicons — ordered so browsers pick the most appropriate size
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
+      { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootShell,

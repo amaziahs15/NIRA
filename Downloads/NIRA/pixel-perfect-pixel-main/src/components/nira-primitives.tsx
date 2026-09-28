@@ -5,7 +5,26 @@ import { cn } from "@/lib/utils";
 import { contributionBars, demoTimeline, demoTrend } from "@/lib/nira-demo";
 
 export function NiraMark({ compact = false }: { compact?: boolean }) {
-  return <div className="flex items-center gap-3"><div className={cn("grid place-items-center rounded-2xl bg-brand text-lg font-bold text-primary-foreground shadow-lg shadow-brand/20", compact ? "size-9" : "size-10")}>n</div><div className="leading-none"><div className="text-[15px] font-extrabold tracking-tight text-ink">NIRA</div><div className="mt-1 text-[10px] text-muted-ink">wellbeing, gently</div></div></div>;
+  return (
+    <div className="flex items-center gap-2.5">
+      <img
+        src="/nira-mark.png"
+        alt="NIRA mark"
+        width={compact ? 36 : 44}
+        height={compact ? 36 : 44}
+        className={cn(
+          "rounded-xl object-contain shadow-sm",
+          compact ? "size-9" : "size-11"
+        )}
+      />
+      {!compact && (
+        <div className="leading-none">
+          <div className="text-[15px] font-extrabold tracking-tight text-ink">NIRA</div>
+          <div className="mt-0.5 text-[10px] text-muted-ink">wellbeing, gently</div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function SoftBadge({ children, tone = "brand", icon }: { children: React.ReactNode; tone?: "brand" | "stable" | "improving" | "attention" | "priority" | "uncertain"; icon?: React.ReactNode }) {
