@@ -17,6 +17,8 @@ import VictimMessages from "@/components/victim/VictimMessages";
 import { WellbeingChatBubble } from "@/components/victim/WellbeingChatBubble";
 import type { ChatMsg } from "@/components/victim/WellbeingChatBubble";
 
+import { executeQuickExit } from "@/lib/quick-exit";
+
 export const Route = createFileRoute("/victim")({
   component: VictimApp,
 });
@@ -34,6 +36,27 @@ function VictimApp() {
   const [view, setView] = useState<WorkspaceView>("home");
   const [data, setData] = useState<VictimData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Esc key triggers Quick Exit on all victim pages except while an input or textarea is focused
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || e.key === "Esc") {
+        const active = document.activeElement;
+        const isInputFocused =
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          (active instanceof HTMLElement && active.isContentEditable);
+
+        if (!isInputFocused) {
+          e.preventDefault();
+          executeQuickExit();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Shared chat state — lifted here so bubble and full-page share the same history
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);

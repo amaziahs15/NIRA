@@ -6,7 +6,7 @@ import {
   PieChart, Pie, Cell, LineChart, Line, Legend,
 } from "recharts";
 import {
-  AlertCircle, BarChart2, TrendingUp, Users, Shield,
+  AlertCircle, TrendingUp, Users, Shield,
   Search, UserCheck, UserX, ClipboardList, Siren,
   Activity, History, CheckCircle2, RefreshCw, Eye, ToggleLeft, ToggleRight,
   FileText, Download, Printer, Settings as SettingsIcon, Send, UserPlus,
@@ -63,21 +63,40 @@ interface AuditEntry {
   occurred_at: string;
 }
 
-type AdminTab = "analytics" | "cases" | "professionals" | "sos" | "reports" | "settings" | "audit";
+type AdminTab = "overview" | "analytics" | "cases" | "professionals" | "sos" | "reports" | "settings" | "audit" | "profile";
+
+/** Map WorkspaceView keys (from the sidebar) → AdminTab */
+function viewToTab(view: string): AdminTab {
+  switch (view) {
+    case "admin_overview":      return "overview";
+    case "admin_cases":         return "cases";
+    case "admin_professionals": return "professionals";
+    case "admin_alerts":        return "sos";
+    case "admin_analytics":     return "analytics";
+    case "admin_reports":       return "reports";
+    case "admin_audit":         return "audit";
+    case "admin_settings":      return "settings";
+    case "admin_profile":       return "profile";
+    default:                    return "overview";
+  }
+}
 
 interface Props {
   userId: string;
   userName: string;
+  activeView?: string;
 }
 
-export default function AdminHome({ userId, userName }: Props) {
+export default function AdminHome({ userId, userName, activeView }: Props) {
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalRow[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
   const [sosItems, setSosItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<AdminTab>("analytics");
+
+  // Derive tab from the sidebar's activeView; fall back to "overview" initially
+  const tab: AdminTab = activeView ? viewToTab(activeView) : "overview";
   const [caseSearch, setCaseSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
   const [sampleDataMode, setSampleDataMode] = useState(false);
@@ -493,15 +512,7 @@ export default function AdminHome({ userId, userName }: Props) {
       ]
     : [];
 
-  const TABS: { key: AdminTab; label: string; icon: any }[] = [
-    { key: "analytics", label: "Analytics & Trends", icon: BarChart2 },
-    { key: "cases", label: `Cases (${cases.length})`, icon: ClipboardList },
-    { key: "professionals", label: `Caseworkers (${professionals.length})`, icon: Users },
-    { key: "sos", label: `SOS (${sosItems.length})`, icon: Siren },
-    { key: "reports", label: "Reports & Export", icon: FileText },
-    { key: "settings", label: "Settings", icon: SettingsIcon },
-    { key: "audit", label: `Audit log (${auditLogs.length})`, icon: History },
-  ];
+
 
   return (
     <div className="space-y-6">
@@ -561,21 +572,36 @@ export default function AdminHome({ userId, userName }: Props) {
         </div>
       )}
 
-      {/* Tab bar */}
-      <div className="flex flex-wrap items-center gap-1 border-b border-line pb-3">
-        {TABS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
-              tab === key ? "bg-brand text-white" : "border border-line text-muted-ink hover:text-ink"
-            } ${key === "sos" && sosItems.length > 0 && tab !== "sos" ? "border-priority text-priority" : ""}`}
-          >
-            <Icon className="size-3.5" />
-            {label}
-          </button>
-        ))}
-      </div>
+
+
+      {/* ── TAB: OVERVIEW (Summary + key metrics) ── */}
+      {(tab === "overview") && (
+        <div className="space-y-5">
+          <div className="rounded-[22px] border border-line bg-white/70 p-6 shadow-soft backdrop-blur-md">
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-muted-ink mb-3">Platform summary</div>
+            {loading ? (
+              <div className="flex justify-center py-8"><div className="size-6 animate-spin rounded-full border-2 border-brand border-t-transparent" /></div>
+            ) : metrics ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {METRIC_CARDS.map((m) => {
+                  const Icon = m.icon;
+                  return (
+                    <div key={m.label} className="rounded-[18px] border border-line bg-surface/60 p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[11px] font-semibold text-muted-ink">{m.label}</div>
+                        <Icon className="size-3.5 text-muted-ink" />
+                      </div>
+                      <div className="mt-2 text-2xl font-extrabold text-ink">{m.value}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-ink text-center py-6">No data yet. Data will appear once cases and check-ins are logged.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── TAB: ANALYTICS ── */}
       {tab === "analytics" && metrics && (
@@ -1145,6 +1171,27 @@ export default function AdminHome({ userId, userName }: Props) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: PROFILE ── */}
+      {tab === "profile" && (
+        <div className="rounded-[22px] border border-line bg-white/70 p-6 shadow-soft backdrop-blur-md max-w-lg">
+          <div className="text-xs font-bold uppercase tracking-[0.12em] text-muted-ink mb-4">Administrator profile</div>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="grid size-14 place-items-center rounded-2xl bg-brand text-xl font-bold text-white shadow-sm">
+              {userName.slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div className="text-base font-bold text-ink">{userName}</div>
+              <div className="text-xs text-muted-ink mt-0.5">System administrator</div>
+              <div className="mt-1 inline-block rounded-full bg-brand/10 px-2.5 py-0.5 text-[11px] font-bold text-brand">Admin</div>
+            </div>
+          </div>
+          <div className="space-y-3 text-xs text-muted-ink border-t border-line pt-4">
+            <div><span className="font-semibold text-ink">User ID:</span> <span className="font-mono">{userId}</span></div>
+            <div><span className="font-semibold text-ink">Role:</span> Administrator</div>
           </div>
         </div>
       )}

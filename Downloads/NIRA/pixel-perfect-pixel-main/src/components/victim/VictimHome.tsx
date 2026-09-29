@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { WorkspaceView } from "@/lib/nira-types";
 import type { VictimData } from "@/routes/victim";
 import { t } from "@/lib/nira-i18n";
+import { executeQuickExit } from "@/lib/quick-exit";
 import { SoftBadge, SafetyNotice } from "@/components/nira-primitives";
 import {
   AlertOctagon,
@@ -45,9 +46,9 @@ export default function VictimHome({ data, lang, onView }: Props) {
   const [calmingOpen, setCalmingOpen] = useState(false);
   const [safetyPlanOpen, setSafetyPlanOpen] = useState(false);
 
-  // Quick Exit function: instantly redirects away to weather.com
+  // Quick Exit function: instantly clears storage and redirects to weather.com
   const handleQuickExit = () => {
-    window.location.replace("https://www.weather.com");
+    executeQuickExit();
   };
 
   const handleSos = async () => {
@@ -70,17 +71,18 @@ export default function VictimHome({ data, lang, onView }: Props) {
     <div className="space-y-6">
       {/* Top Safety Bar with Quick Exit */}
       <div className="flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-2.5 shadow-2xs">
-        <div className="flex items-center gap-2 text-xs text-text-secondary">
+        <div className="hidden sm:flex items-center gap-2 text-xs text-text-secondary">
           <span className="size-2 rounded-full bg-success animate-pulse" />
           <span>Private & encrypted space</span>
         </div>
         <button
+          id="quick-exit-btn"
           onClick={handleQuickExit}
           title={t(lang, "quick_exit_desc")}
-          className="flex items-center gap-1.5 rounded-full bg-danger/10 px-3.5 py-1.5 text-xs font-bold text-danger border border-danger/25 transition hover:bg-danger hover:text-white"
+          className="ml-auto flex items-center gap-1.5 rounded-full bg-danger/10 px-3.5 py-1.5 text-xs font-bold text-danger border border-danger/25 transition hover:bg-danger hover:text-white active:scale-95"
         >
           <LogOut className="size-3.5" />
-          <span>{t(lang, "quick_exit")} (Esc)</span>
+          <span>{t(lang, "quick_exit")}<span className="hidden sm:inline"> (Esc)</span></span>
         </button>
       </div>
 

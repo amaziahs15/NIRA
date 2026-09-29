@@ -10,10 +10,13 @@ export type WorkspaceView =
   | "aggregate"
   | "chat"
   // admin views
+  | "admin_overview"
   | "admin_cases"
   | "admin_professionals"
   | "admin_alerts"
   | "admin_analytics"
   | "admin_reports"
   | "admin_audit"
-  | "admin_settings";
+  | "admin_settings"
+  | "admin_profile";
+

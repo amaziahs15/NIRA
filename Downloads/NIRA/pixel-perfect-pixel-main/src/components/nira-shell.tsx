@@ -1,19 +1,24 @@
 import { useEffect, useState, useMemo } from "react";
 import {
-  BarChart3,
+  Bell,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   FileHeart,
+  FileText,
   HeartHandshake,
+  History,
   Home,
   LogOut,
   Menu,
   MessageSquare,
   Moon,
+  Settings,
   ShieldCheck,
   Sun,
+  TrendingUp,
   UserRound,
+  Users,
   X,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
@@ -71,7 +76,6 @@ export function NiraShell({
     });
   };
 
-  // Nav items for victim — labels come from i18n
   const victimNav: { key: WorkspaceView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { key: "home", label: t(lang, "home"), icon: Home },
     { key: "case", label: t(lang, "my_case"), icon: FileHeart },
@@ -84,11 +88,22 @@ export function NiraShell({
   const professionalNav: { key: WorkspaceView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { key: "home", label: "Overview", icon: Home },
     { key: "review", label: "Priority review", icon: ClipboardList },
-    ...(role === "admin" ? [{ key: "aggregate" as WorkspaceView, label: "Aggregate view", icon: BarChart3 }] : []),
     { key: "profile", label: "Profile", icon: UserRound },
   ];
 
-  const nav = role === "victim" ? victimNav : professionalNav;
+  const adminNav: { key: WorkspaceView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { key: "admin_overview", label: t(lang, "admin_nav_overview"), icon: Home },
+    { key: "admin_cases", label: t(lang, "admin_nav_cases"), icon: ClipboardList },
+    { key: "admin_professionals", label: t(lang, "admin_nav_professionals"), icon: Users },
+    { key: "admin_alerts", label: t(lang, "admin_nav_alerts"), icon: Bell },
+    { key: "admin_analytics", label: t(lang, "admin_nav_analytics"), icon: TrendingUp },
+    { key: "admin_reports", label: t(lang, "admin_nav_reports"), icon: FileText },
+    { key: "admin_audit", label: t(lang, "admin_nav_audit"), icon: History },
+    { key: "admin_settings", label: t(lang, "admin_nav_settings"), icon: Settings },
+    { key: "admin_profile", label: t(lang, "admin_nav_profile"), icon: UserRound },
+  ];
+
+  const nav = role === "victim" ? victimNav : role === "admin" ? adminNav : professionalNav;
 
   useEffect(() => {
     setMenuOpen(false);

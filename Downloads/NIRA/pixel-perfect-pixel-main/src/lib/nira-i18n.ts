@@ -69,6 +69,16 @@ export const i18n: Record<string, Record<string, string>> = {
     appointment_proposed: "An appointment has been proposed for you.",
     appointment_accepted: "Appointment confirmed.",
     appointment_reschedule: "Reschedule request sent.",
+    // Admin nav labels
+    admin_nav_overview: "Overview",
+    admin_nav_cases: "Cases",
+    admin_nav_professionals: "Professionals",
+    admin_nav_alerts: "Alerts & SOS",
+    admin_nav_analytics: "Analytics",
+    admin_nav_reports: "Reports",
+    admin_nav_audit: "Audit log",
+    admin_nav_settings: "Settings",
+    admin_nav_profile: "Profile",
   },
   ta: {
     greeting: "காலை வணக்கம்",
@@ -139,6 +149,16 @@ export const i18n: Record<string, Record<string, string>> = {
     appointment_proposed: "உங்களுக்காக ஒரு சந்திப்பு முன்மொழியப்பட்டுள்ளது.",
     appointment_accepted: "சந்திப்பு உறுதிப்படுத்தப்பட்டது.",
     appointment_reschedule: "மறுதிட்டமிடல் கோரிக்கை அனுப்பப்பட்டது.",
+    // Admin nav labels
+    admin_nav_overview: "கண்ணோட்டம்",
+    admin_nav_cases: "வழக்குகள்",
+    admin_nav_professionals: "தொழில் வல்லுநர்கள்",
+    admin_nav_alerts: "எச்சரிக்கைகள் & SOS",
+    admin_nav_analytics: "பகுப்பாய்வு",
+    admin_nav_reports: "அறிக்கைகள்",
+    admin_nav_audit: "தணிக்கை பதிவு",
+    admin_nav_settings: "அமைப்புகள்",
+    admin_nav_profile: "சுயவிவரம்",
   },
   hi: {
     greeting: "सुप्रभात",
@@ -209,6 +229,16 @@ export const i18n: Record<string, Record<string, string>> = {
     appointment_proposed: "आपके लिए एक नियुक्ति प्रस्तावित की गई है।",
     appointment_accepted: "नियुक्ति की पुष्टि हुई।",
     appointment_reschedule: "पुनर्निर्धारण अनुरोध भेजा गया।",
+    // Admin nav labels
+    admin_nav_overview: "अवलोकन",
+    admin_nav_cases: "मामले",
+    admin_nav_professionals: "विशेषज्ञ",
+    admin_nav_alerts: "सतर्कता & SOS",
+    admin_nav_analytics: "विश्लेषण",
+    admin_nav_reports: "रिपोर्ट",
+    admin_nav_audit: "ऑडिट लॉग",
+    admin_nav_settings: "सेटिंग्स",
+    admin_nav_profile: "प्रोफ़ाइल",
   },
 };
 

@@ -15,7 +15,7 @@ function AdminApp() {
   const [userId, setUserId] = useState("");
   const [name, setName] = useState("Admin");
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<WorkspaceView>("home");
+  const [view, setView] = useState<WorkspaceView>("admin_overview");
 
   const load = useCallback(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -47,7 +47,7 @@ function AdminApp() {
 
   return (
     <NiraShell role="admin" name={name} view={view} onView={setView}>
-      <AdminHome userId={userId} userName={name} />
+      <AdminHome userId={userId} userName={name} activeView={view} />
     </NiraShell>
   );
 }
