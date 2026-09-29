@@ -34,6 +34,7 @@ import {
   CalendarClock,
   AlertTriangle,
   MessageSquare,
+  ArrowLeft,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -45,13 +46,31 @@ import {
 } from "@/components/ui/command";
 import { InterventionBoard } from "./InterventionBoard";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import type { WorkspaceView } from "@/lib/nira-types";
 
 type TabMode = "queue" | "pipeline" | "inbox";
 type QueueTab = "my" | "unassigned" | "sos";
+export type ProfessionalTab = "overview" | "review" | "profile";
+
+/** Map WorkspaceView keys (from the sidebar) → ProfessionalTab */
+function viewToTab(view?: string): ProfessionalTab {
+  switch (view) {
+    case "review":
+      return "review";
+    case "profile":
+      return "profile";
+    case "home":
+    default:
+      return "overview";
+  }
+}
 
 interface Props {
   userId: string;
   userName: string;
+  activeView?: WorkspaceView | string;
+  onViewChange?: (view: WorkspaceView) => void;
   onViewCase: (caseId: string) => void;
 }
 
@@ -96,11 +115,15 @@ async function fetchMetrics(professionalId: string) {
   };
 }
 
-export default function ProfessionalHome({ userId, userName, onViewCase }: Props) {
+export default function ProfessionalHome({ userId, userName, activeView, onViewChange, onViewCase }: Props) {
   const [queue, setQueue] = useState<CaseQueueItem[]>([]);
   const [sosItems, setSosItems] = useState<(SosRow & { caseNumber: string; district: string })[]>([]);
   const [metrics, setMetrics] = useState({ activeCases: 0, priorityAlerts: 0, openAlerts: 0, improving: 0 });
   const [loading, setLoading] = useState(true);
+
+  // Derive tab from the sidebar's activeView (shared route state), matching the AdminHome pattern
+  const tab: ProfessionalTab = viewToTab(activeView);
+
   const [tabMode, setTabMode] = useState<TabMode>("queue");
   const [queueTab, setQueueTab] = useState<QueueTab>("my");
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,13 +151,13 @@ export default function ProfessionalHome({ userId, userName, onViewCase }: Props
   const load = async () => {
     setLoading(true);
     const [queueData, sosData, metricsData, inboxData, followupsData] = await Promise.all([
-      fetchProfessionalQueue(userId, queueTab === "sos" ? "my" : queueTab),
+      fetchProfessionalQueue(userId, queueTab),
       fetchOpenSOS(),
       fetchMetrics(userId),
       fetchProfessionalInbox(userId),
       fetchFollowups(userId),
     ]);
-    setQueue(queueTab === "sos" ? [] : queueData);
+    setQueue(queueData);
     setSosItems(sosData);
     setMetrics(metricsData);
     setConversations(inboxData);
@@ -186,7 +209,7 @@ export default function ProfessionalHome({ userId, userName, onViewCase }: Props
   }, [userId]);
 
   const filteredQueue = useMemo(() => {
-    const source = queueTab === "sos"
+    const source = (queueTab === "sos" && queue.length === 0)
       ? sosItems.map((s) => ({
           caseId: s.id,
           caseNumber: s.caseNumber,
@@ -251,336 +274,518 @@ export default function ProfessionalHome({ userId, userName, onViewCase }: Props
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-ink">Support workspace</div>
-          <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-ink">A clear view for human review</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          {unreadBadge > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-priority/15 px-3 py-1.5 text-xs font-bold text-priority">
-              <Bell className="size-3.5" />
-              {unreadBadge} unread
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => setCmdOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface/80 px-3.5 py-2 text-xs font-semibold text-muted-ink shadow-xs transition hover:border-brand/40 hover:text-ink"
-          >
-            <Search className="size-3.5" />
-            Quick actions...
-            <kbd className="rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] font-mono text-muted-ink">⌘K</kbd>
-          </button>
-        </div>
-      </div>
-
-      {/* Pinned SOS Banner */}
-      {sosItems.length > 0 && (
-        <div className="rounded-xl border border-priority/40 bg-priority/10 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Siren className="size-5 text-priority animate-pulse" />
-            <span className="text-sm font-extrabold text-priority">
-              {sosItems.length} open SOS request{sosItems.length > 1 ? "s" : ""} — immediate attention needed
-            </span>
+      {/* ── TAB: PROFILE ── */}
+      {tab === "profile" && (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-ink">Support workspace</div>
+              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-ink">Support Officer Profile</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => onViewChange?.("home")}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 py-2 text-xs font-semibold text-muted-ink shadow-xs transition hover:border-brand/40 hover:text-ink"
+            >
+              <ArrowLeft className="size-3.5" />
+              Back to Overview
+            </button>
           </div>
-          <div className="space-y-2">
-            {sosItems.slice(0, 3).map((sos) => (
-              <div key={sos.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-priority/20 bg-surface/60 px-4 py-2.5">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm font-bold text-priority">{sos.requestCode}</span>
-                  <span className="text-xs text-muted-ink">{sos.caseNumber} · {sos.district}</span>
-                  <span className="text-xs text-muted-ink flex items-center gap-1">
-                    <Clock className="size-3" />
-                    {formatMinutesAgo(Math.round((Date.now() - new Date(sos.createdAt).getTime()) / 60000))}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={async () => { await updateSosStatus(sos.id, "Acknowledged"); toast.success("SOS acknowledged"); await load(); }}
-                    className="rounded-lg bg-priority/15 px-3 py-1.5 text-xs font-bold text-priority hover:bg-priority/25 transition"
-                  >Acknowledge</button>
-                  <button
-                    onClick={async () => { await updateSosStatus(sos.id, "Handled"); toast.success("SOS marked handled"); await load(); }}
-                    className="rounded-lg bg-improving/15 px-3 py-1.5 text-xs font-bold text-improving hover:bg-improving/25 transition"
-                  >Mark handled</button>
-                </div>
+
+          <div className="rounded-[22px] border border-line bg-surface p-6 shadow-soft backdrop-blur-md max-w-xl">
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-muted-ink mb-4">Professional credentials & status</div>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="grid size-14 place-items-center rounded-2xl bg-brand text-xl font-bold text-white shadow-sm">
+                {userName.slice(0, 2).toUpperCase()}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Overdue Follow-ups Alert Banner */}
-      {followups.some((f) => f.isOverdue) && (
-        <div className="rounded-xl border border-attention/40 bg-attention/10 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <CalendarClock className="size-5 text-attention" />
-            <span className="text-sm font-extrabold text-attention">
-              {followups.filter((f) => f.isOverdue).length} overdue follow-up{followups.filter((f) => f.isOverdue).length > 1 ? "s" : ""} — scheduled caseworker check needed
-            </span>
-          </div>
-          <div className="space-y-1.5">
-            {followups.filter((f) => f.isOverdue).slice(0, 3).map((f) => (
-              <div key={f.caseId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-attention/20 bg-surface/60 px-4 py-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-ink">{f.caseNumber}</span>
-                  <span className="text-xs text-muted-ink">{f.victimName} · {f.district}</span>
-                  <span className="text-xs text-attention font-semibold">
-                    Scheduled: {new Date(f.followUpDate).toLocaleDateString("en-IN")}
-                  </span>
-                </div>
-                <button
-                  onClick={() => onViewCase(f.caseId)}
-                  className="rounded-lg bg-attention/15 px-3 py-1 text-xs font-bold text-attention hover:bg-attention/25 transition"
-                >
-                  Review case
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {metricCards.map((m) => {
-          const Icon = m.icon;
-          return (
-            <div key={m.label} className="rounded-[22px] border border-line bg-white/70 p-5 shadow-soft backdrop-blur-md transition-transform hover:-translate-y-0.5 duration-200">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold text-muted-ink">{m.label}</div>
-                <Icon className="size-4 text-muted-ink" />
-              </div>
-              <div className="mt-3 text-3xl font-extrabold text-ink">{m.value}</div>
-              <SoftBadge tone={m.tone} />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Tab row: Queue / Pipeline / Inbox */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
-        <div className="flex items-center gap-1 rounded-xl border border-line bg-surface/70 p-1">
-          <button
-            type="button" onClick={() => setTabMode("queue")}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${tabMode === "queue" ? "bg-brand text-white" : "text-muted-ink hover:text-ink"}`}
-          ><ListFilter className="size-3.5" />Review Queue</button>
-          <button
-            type="button" onClick={() => setTabMode("pipeline")}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${tabMode === "pipeline" ? "bg-brand text-white" : "text-muted-ink hover:text-ink"}`}
-          ><Kanban className="size-3.5" />Pipeline</button>
-          <button
-            type="button" onClick={() => setTabMode("inbox")}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${tabMode === "inbox" ? "bg-brand text-white" : "text-muted-ink hover:text-ink"}`}
-          >
-            <Mail className="size-3.5" />
-            Inbox
-            {conversations.reduce((acc, c) => acc + c.unreadCount, 0) > 0 && (
-              <span className="ml-1 rounded-full bg-priority px-1.5 py-0.2 text-[10px] font-bold text-white">
-                {conversations.reduce((acc, c) => acc + c.unreadCount, 0)}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {tabMode === "queue" && (
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Queue sub-tabs */}
-            {(["my", "unassigned", "sos"] as QueueTab[]).map((t) => {
-              const labels: Record<QueueTab, string> = { my: "My cases", unassigned: "Unassigned", sos: "SOS" };
-              return (
-                <button key={t} onClick={() => setQueueTab(t)}
-                  className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${queueTab === t
-                    ? t === "sos" ? "border-priority bg-priority/10 text-priority" : "border-brand bg-brand-soft text-brand"
-                    : "border-line text-muted-ink hover:border-brand/30"
-                  }`}>
-                  {labels[t]}{t === "sos" && sosItems.length > 0 && <span className="ml-1 rounded-full bg-priority/20 px-1.5 py-0.5 text-[10px] font-bold text-priority">{sosItems.length}</span>}
-                </button>
-              );
-            })}
-
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-ink" />
-              <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 rounded-lg border border-line bg-surface/80 pl-8 pr-3 text-xs text-ink placeholder:text-muted-ink focus:border-brand focus:outline-hidden" />
-            </div>
-            <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
-              className="h-8 rounded-lg border border-line bg-surface/80 px-2.5 text-xs font-medium text-ink focus:border-brand focus:outline-hidden">
-              <option value="all">All severities</option>
-              <option value="priority">Priority</option>
-              <option value="attention">Attention</option>
-              <option value="routine">Routine</option>
-            </select>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}
-              className="h-8 rounded-lg border border-line bg-surface/80 px-2.5 text-xs font-medium text-ink focus:border-brand focus:outline-hidden">
-              <option value="severity">Highest severity</option>
-              <option value="newest">Most recent check-in</option>
-            </select>
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      {tabMode === "pipeline" ? (
-        <InterventionBoard onSelectCase={(cn) => {
-          // find the queue item by case number and navigate
-          const item = queue.find((q) => q.caseNumber === cn);
-          if (item) onViewCase(item.caseId);
-        }} />
-      ) : loading ? (
-        <div className="flex justify-center py-20"><div className="size-8 animate-spin rounded-full border-2 border-brand border-t-transparent" /></div>
-      ) : (
-        <div className="rounded-[22px] border border-line bg-white/70 p-5 shadow-soft backdrop-blur-md">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="text-xs font-bold uppercase tracking-[0.12em] text-muted-ink">
-              {queueTab === "my" ? "My assigned cases" : queueTab === "unassigned" ? "Unassigned cases" : "Open SOS requests"}
-            </div>
-            <SoftBadge tone="attention">Human review required</SoftBadge>
-          </div>
-
-          {filteredQueue.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-center">
-              <CheckCircle2 className="size-8 text-improving mb-2" />
-              <p className="text-sm font-semibold text-ink">
-                {queue.length === 0 ? "No cases in this queue yet" : "No cases match your filters"}
-              </p>
-              <p className="mt-1 text-xs text-muted-ink">
-                {queue.length === 0
-                  ? queueTab === "unassigned" ? "All cases have been assigned." : "No cases are currently assigned to you."
-                  : "Try adjusting your search or filter."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredQueue.map((item) => (
-                <div key={item.caseId} className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-line bg-surface/60 px-4 py-3 transition hover:border-brand/30 hover:bg-brand-soft/10">
-                  {/* Avatar */}
-                  <div className={`grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold ${
-                    item.alertSeverity === "priority" ? "bg-priority/12 text-priority"
-                    : item.alertSeverity === "attention" ? "bg-attention/12 text-attention"
-                    : "bg-improving/12 text-improving"
-                  }`}>{item.initials}</div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-bold text-ink">{item.caseNumber}</span>
-                      <span className="text-xs text-muted-ink">{item.district}</span>
-                      {item.alertSeverity && (
-                        <SoftBadge tone={item.alertSeverity as any}>{item.alertSeverity}</SoftBadge>
-                      )}
-                      {item.crisisFlag && (
-                        <SoftBadge tone="priority">Crisis flag</SoftBadge>
-                      )}
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-ink">
-                      {item.latestMood && <span>Mood: <strong className="text-ink">{item.latestMood}</strong></span>}
-                      {item.latestScore !== null && <span>Score: <strong className="text-ink">{item.latestScore}</strong></span>}
-                      {item.latestTrend && <span>Trend: <strong className="text-ink">{item.latestTrend}</strong></span>}
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3" />{formatMinutesAgo(item.minutesSinceCheckin)}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 text-xs text-muted-ink">Stage: {item.stage}</div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-line/50">
-                    {item.alertSeverity && <StatusIcon tone={item.alertSeverity} />}
-
-                    {queueTab === "unassigned" ? (
-                      <button
-                        id={`claim-case-${item.caseId}`}
-                        disabled={claimingId === item.caseId}
-                        onClick={() => handleClaimCase(item.caseId)}
-                        className="flex items-center gap-1.5 shrink-0 rounded-xl bg-brand px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-brand/90 disabled:opacity-50"
-                      >
-                        {claimingId === item.caseId
-                          ? <span className="size-3 animate-spin rounded-full border border-white border-t-transparent" />
-                          : <UserPlus className="size-3.5" />}
-                        Claim case
-                      </button>
-                    ) : (
-                      <button
-                        id={`review-case-${item.caseId}`}
-                        onClick={() => onViewCase(item.caseId)}
-                        className="flex items-center gap-1.5 shrink-0 rounded-xl bg-brand-soft px-3.5 py-1.5 text-xs font-bold text-brand transition hover:bg-brand/10"
-                      >
-                        <Eye className="size-3.5" />
-                        Review
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── INBOX MODE ── */}
-      {tabMode === "inbox" && (
-        <div className="space-y-4">
-          <div className="rounded-[22px] border border-line bg-white/70 p-5 shadow-soft backdrop-blur-md">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
-                <h3 className="text-sm font-bold text-ink">Caseworker Messaging Inbox</h3>
-                <p className="text-xs text-muted-ink">Direct, confidential conversations with participants assigned to you.</p>
+                <div className="text-base font-bold text-ink">{userName}</div>
+                <div className="text-xs text-muted-ink mt-0.5">Caseworker / Support Officer</div>
+                <div className="mt-1 inline-block rounded-full bg-brand/10 px-2.5 py-0.5 text-[11px] font-bold text-brand">Active Caseworker</div>
               </div>
-              <span className="text-xs font-semibold text-muted-ink">
-                {conversations.length} active conversation{conversations.length === 1 ? "" : "s"}
-              </span>
             </div>
+            <div className="space-y-3 text-xs text-muted-ink border-t border-line pt-4">
+              <div><span className="font-semibold text-ink">User ID:</span> <span className="font-mono text-ink/80">{userId}</span></div>
+              <div><span className="font-semibold text-ink">Role:</span> Support Officer (Professional)</div>
+              <div><span className="font-semibold text-ink">Assigned Active Cases:</span> <span className="font-bold text-ink">{metrics.activeCases}</span></div>
+              <div><span className="font-semibold text-ink">Pending Priority Alerts:</span> <span className="font-bold text-ink">{metrics.priorityAlerts}</span></div>
+              <div><span className="font-semibold text-ink">Open System Alerts:</span> <span className="font-bold text-ink">{metrics.openAlerts}</span></div>
+              <div><span className="font-semibold text-ink">Improving Cases:</span> <span className="font-bold text-ink">{metrics.improving}</span></div>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {conversations.length === 0 ? (
-              <div className="rounded-xl border border-line bg-surface/60 p-12 text-center text-muted-ink text-sm">
-                No active participant conversations yet. Messages sent by participants will appear here.
+      {/* ── TAB: PRIORITY REVIEW ── */}
+      {tab === "review" && (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-priority font-bold">Urgent triage</div>
+              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-ink">Priority Review Queue</h2>
+              <p className="mt-0.5 text-xs text-muted-ink">Participants with active priority alerts, crisis indicators, or emergency SOS requests requiring immediate human intervention.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onViewChange?.("home")}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 py-2 text-xs font-semibold text-muted-ink shadow-xs transition hover:border-brand/40 hover:text-ink"
+            >
+              <ArrowLeft className="size-3.5" />
+              Back to Overview
+            </button>
+          </div>
+
+          {/* SOS Section in Priority Review */}
+          {sosItems.length > 0 && (
+            <div className="rounded-xl border border-priority/40 bg-priority/10 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Siren className="size-5 text-priority animate-pulse" />
+                <span className="text-sm font-extrabold text-priority">
+                  {sosItems.length} active SOS request{sosItems.length > 1 ? "s" : ""} — immediate attention needed
+                </span>
               </div>
-            ) : (
-              <div className="divide-y divide-line rounded-xl border border-line bg-surface/50 overflow-hidden">
-                {conversations.map((conv) => (
-                  <div
-                    key={conv.caseId}
-                    onClick={() => onViewCase(conv.caseId)}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 hover:bg-surface/80 transition cursor-pointer"
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand font-bold text-xs mt-0.5">
-                        {conv.victimName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-ink">{conv.victimName}</span>
-                          <span className="text-[11px] font-mono text-muted-ink">{conv.caseNumber}</span>
-                          <SoftBadge tone="uncertain">{conv.district}</SoftBadge>
-                          {conv.unreadCount > 0 && (
-                            <span className="rounded-full bg-priority px-2 py-0.5 text-[10px] font-bold text-white">
-                              {conv.unreadCount} new
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-ink line-clamp-1">
-                          {conv.lastSenderRole === "professional" && <span className="font-semibold text-ink">You: </span>}
-                          {conv.lastMessageBody ?? "No messages yet"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                      <span className="text-[11px] text-muted-ink">
-                        {conv.lastMessageAt ? new Date(conv.lastMessageAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+              <div className="space-y-2">
+                {sosItems.map((sos) => (
+                  <div key={sos.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-priority/20 bg-surface px-4 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm font-bold text-priority">{sos.requestCode}</span>
+                      <span className="text-xs text-muted-ink">{sos.caseNumber} · {sos.district}</span>
+                      <span className="text-xs text-muted-ink flex items-center gap-1">
+                        <Clock className="size-3" />
+                        {formatMinutesAgo(Math.round((Date.now() - new Date(sos.createdAt).getTime()) / 60000))}
                       </span>
+                    </div>
+                    <div className="flex gap-2">
                       <button
-                        onClick={(e) => { e.stopPropagation(); onViewCase(conv.caseId); }}
-                        className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand/90 transition"
-                      >
-                        Open chat
-                      </button>
+                        onClick={async () => { await updateSosStatus(sos.id, "Acknowledged"); toast.success("SOS acknowledged"); await load(); }}
+                        className="rounded-lg bg-priority/15 px-3 py-1.5 text-xs font-bold text-priority hover:bg-priority/25 transition"
+                      >Acknowledge</button>
+                      <button
+                        onClick={async () => { await updateSosStatus(sos.id, "Handled"); toast.success("SOS marked handled"); await load(); }}
+                        className="rounded-lg bg-improving/15 px-3 py-1.5 text-xs font-bold text-improving hover:bg-improving/25 transition"
+                      >Mark handled</button>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Priority cases list */}
+          <div className="rounded-[22px] border border-line bg-surface p-5 shadow-soft backdrop-blur-md">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-xs font-bold uppercase tracking-[0.12em] text-muted-ink">
+                Priority Cases
+              </div>
+              <SoftBadge tone="priority">Priority triage</SoftBadge>
+            </div>
+
+            {loading ? (
+              <div className="flex justify-center py-12"><div className="size-8 animate-spin rounded-full border-2 border-brand border-t-transparent" /></div>
+            ) : (() => {
+              const priorityCases = queue.filter((item) => item.alertSeverity === "priority" || item.crisisFlag);
+              if (priorityCases.length === 0 && sosItems.length === 0) {
+                return (
+                  <div className="flex flex-col items-center py-12 text-center">
+                    <CheckCircle2 className="size-8 text-improving mb-2" />
+                    <p className="text-sm font-semibold text-ink">No high-priority alerts at this time</p>
+                    <p className="mt-1 text-xs text-muted-ink">All participant check-ins and signals are currently stable or routine.</p>
+                    <button
+                      type="button"
+                      onClick={() => onViewChange?.("home")}
+                      className="mt-4 rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white transition hover:bg-brand/90"
+                    >
+                      View all cases in Overview
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div className="space-y-3">
+                  {priorityCases.map((item) => (
+                    <div key={item.caseId} className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-line bg-surface-elevated/60 px-4 py-3 transition hover:border-brand/30 hover:bg-brand-soft/10">
+                      <div className="grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold bg-priority/15 text-priority">
+                        {item.initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-bold text-ink">{item.caseNumber}</span>
+                          <span className="text-xs text-muted-ink">{item.district}</span>
+                          <SoftBadge tone="priority">Priority</SoftBadge>
+                          {item.crisisFlag && <SoftBadge tone="priority">Crisis flag</SoftBadge>}
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-ink">
+                          {item.latestMood && <span>Mood: <strong className="text-ink">{item.latestMood}</strong></span>}
+                          {item.latestScore !== null && <span>Score: <strong className="text-ink">{item.latestScore}</strong></span>}
+                          {item.latestTrend && <span>Trend: <strong className="text-ink">{item.latestTrend}</strong></span>}
+                          <span className="flex items-center gap-1">
+                            <Clock className="size-3" />{formatMinutesAgo(item.minutesSinceCheckin)}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 text-xs text-muted-ink">Stage: {item.stage}</div>
+                      </div>
+                      <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-line/50">
+                        <StatusIcon tone="priority" />
+                        <button
+                          onClick={() => onViewCase(item.caseId)}
+                          className="flex items-center gap-1.5 shrink-0 rounded-xl bg-priority/15 px-3.5 py-1.5 text-xs font-bold text-priority transition hover:bg-priority/25"
+                        >
+                          <Eye className="size-3.5" />
+                          Review
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: OVERVIEW ── */}
+      {tab === "overview" && (
+        <div className="space-y-6">
+          {/* Top Header */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-ink">Support workspace</div>
+              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-ink">A clear view for human review</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              {unreadBadge > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-priority/15 px-3 py-1.5 text-xs font-bold text-priority">
+                  <Bell className="size-3.5" />
+                  {unreadBadge} unread
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setCmdOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface/80 px-3.5 py-2 text-xs font-semibold text-muted-ink shadow-xs transition hover:border-brand/40 hover:text-ink"
+              >
+                <Search className="size-3.5" />
+                Quick actions...
+                <kbd className="rounded border border-line bg-surface-elevated px-1.5 py-0.5 text-[10px] font-mono text-muted-ink">⌘K</kbd>
+              </button>
+            </div>
+          </div>
+
+          {/* Pinned SOS Banner */}
+          {sosItems.length > 0 && (
+            <div className="rounded-xl border border-priority/40 bg-priority/10 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Siren className="size-5 text-priority animate-pulse" />
+                <span className="text-sm font-extrabold text-priority">
+                  {sosItems.length} open SOS request{sosItems.length > 1 ? "s" : ""} — immediate attention needed
+                </span>
+              </div>
+              <div className="space-y-2">
+                {sosItems.slice(0, 3).map((sos) => (
+                  <div key={sos.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-priority/20 bg-surface/80 px-4 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm font-bold text-priority">{sos.requestCode}</span>
+                      <span className="text-xs text-muted-ink">{sos.caseNumber} · {sos.district}</span>
+                      <span className="text-xs text-muted-ink flex items-center gap-1">
+                        <Clock className="size-3" />
+                        {formatMinutesAgo(Math.round((Date.now() - new Date(sos.createdAt).getTime()) / 60000))}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => { await updateSosStatus(sos.id, "Acknowledged"); toast.success("SOS acknowledged"); await load(); }}
+                        className="rounded-lg bg-priority/15 px-3 py-1.5 text-xs font-bold text-priority hover:bg-priority/25 transition"
+                      >Acknowledge</button>
+                      <button
+                        onClick={async () => { await updateSosStatus(sos.id, "Handled"); toast.success("SOS marked handled"); await load(); }}
+                        className="rounded-lg bg-improving/15 px-3 py-1.5 text-xs font-bold text-improving hover:bg-improving/25 transition"
+                      >Mark handled</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Overdue Follow-ups Alert Banner */}
+          {followups.some((f) => f.isOverdue) && (
+            <div className="rounded-xl border border-attention/40 bg-attention/10 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CalendarClock className="size-5 text-attention" />
+                <span className="text-sm font-extrabold text-attention">
+                  {followups.filter((f) => f.isOverdue).length} overdue follow-up{followups.filter((f) => f.isOverdue).length > 1 ? "s" : ""} — scheduled caseworker check needed
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {followups.filter((f) => f.isOverdue).slice(0, 3).map((f) => (
+                  <div key={f.caseId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-attention/20 bg-surface/80 px-4 py-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-ink">{f.caseNumber}</span>
+                      <span className="text-xs text-muted-ink">{f.victimName} · {f.district}</span>
+                      <span className="text-xs text-attention font-semibold">
+                        Scheduled: {new Date(f.followUpDate).toLocaleDateString("en-IN")}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => onViewCase(f.caseId)}
+                      className="rounded-lg bg-attention/15 px-3 py-1 text-xs font-bold text-attention hover:bg-attention/25 transition"
+                    >
+                      Review case
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Metric cards */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {metricCards.map((m) => {
+              const Icon = m.icon;
+              return (
+                <div
+                  key={m.label}
+                  onClick={() => {
+                    if (m.tone === "priority" && onViewChange) {
+                      onViewChange("review");
+                    }
+                  }}
+                  className={cn(
+                    "rounded-[22px] border border-line bg-surface p-5 shadow-soft backdrop-blur-md transition-transform hover:-translate-y-0.5 duration-200",
+                    m.tone === "priority" && "cursor-pointer hover:border-priority/40"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold text-muted-ink">{m.label}</div>
+                    <Icon className="size-4 text-muted-ink" />
+                  </div>
+                  <div className="mt-3 text-3xl font-extrabold text-ink">{m.value}</div>
+                  <SoftBadge tone={m.tone} />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Tab row: Queue / Pipeline / Inbox */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+            <div className="flex items-center gap-1 rounded-xl border border-line bg-surface-elevated/70 p-1">
+              <button
+                type="button" onClick={() => setTabMode("queue")}
+                className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${tabMode === "queue" ? "bg-brand text-white" : "text-muted-ink hover:text-ink"}`}
+              ><ListFilter className="size-3.5" />Review Queue</button>
+              <button
+                type="button" onClick={() => setTabMode("pipeline")}
+                className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${tabMode === "pipeline" ? "bg-brand text-white" : "text-muted-ink hover:text-ink"}`}
+              ><Kanban className="size-3.5" />Pipeline</button>
+              <button
+                type="button" onClick={() => setTabMode("inbox")}
+                className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${tabMode === "inbox" ? "bg-brand text-white" : "text-muted-ink hover:text-ink"}`}
+              >
+                <Mail className="size-3.5" />
+                Inbox
+                {conversations.reduce((acc, c) => acc + c.unreadCount, 0) > 0 && (
+                  <span className="ml-1 rounded-full bg-priority px-1.5 py-0.2 text-[10px] font-bold text-white">
+                    {conversations.reduce((acc, c) => acc + c.unreadCount, 0)}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {tabMode === "queue" && (
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Queue sub-tabs */}
+                {(["my", "unassigned", "sos"] as QueueTab[]).map((t) => {
+                  const labels: Record<QueueTab, string> = { my: "My cases", unassigned: "Unassigned", sos: "SOS" };
+                  return (
+                    <button key={t} onClick={() => setQueueTab(t)}
+                      className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${queueTab === t
+                        ? t === "sos" ? "border-priority bg-priority/10 text-priority" : "border-brand bg-brand-soft text-brand"
+                        : "border-line text-muted-ink hover:border-brand/30"
+                      }`}>
+                      {labels[t]}{t === "sos" && sosItems.length > 0 && <span className="ml-1 rounded-full bg-priority/20 px-1.5 py-0.5 text-[10px] font-bold text-priority">{sosItems.length}</span>}
+                    </button>
+                  );
+                })}
+
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-ink" />
+                  <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 rounded-lg border border-line bg-surface/80 pl-8 pr-3 text-xs text-ink placeholder:text-muted-ink focus:border-brand focus:outline-hidden" />
+                </div>
+                <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
+                  className="h-8 rounded-lg border border-line bg-surface/80 px-2.5 text-xs font-medium text-ink focus:border-brand focus:outline-hidden [&>option]:bg-surface [&>option]:text-ink">
+                  <option value="all">All severities</option>
+                  <option value="priority">Priority</option>
+                  <option value="attention">Attention</option>
+                  <option value="routine">Routine</option>
+                </select>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}
+                  className="h-8 rounded-lg border border-line bg-surface/80 px-2.5 text-xs font-medium text-ink focus:border-brand focus:outline-hidden [&>option]:bg-surface [&>option]:text-ink">
+                  <option value="severity">Highest severity</option>
+                  <option value="newest">Most recent check-in</option>
+                </select>
+              </div>
             )}
           </div>
+
+          {/* Content */}
+          {loading ? (
+            <div className="flex justify-center py-20"><div className="size-8 animate-spin rounded-full border-2 border-brand border-t-transparent" /></div>
+          ) : tabMode === "pipeline" ? (
+            <InterventionBoard onSelectCase={(cn) => {
+              // find the queue item by case number and navigate
+              const item = queue.find((q) => q.caseNumber === cn);
+              if (item) onViewCase(item.caseId);
+            }} />
+          ) : tabMode === "inbox" ? (
+            <div className="space-y-4">
+              <div className="rounded-[22px] border border-line bg-surface p-5 shadow-soft backdrop-blur-md">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-ink">Caseworker Messaging Inbox</h3>
+                    <p className="text-xs text-muted-ink">Direct, confidential conversations with participants assigned to you.</p>
+                  </div>
+                  <span className="text-xs font-semibold text-muted-ink">
+                    {conversations.length} active conversation{conversations.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+
+                {conversations.length === 0 ? (
+                  <div className="rounded-xl border border-line bg-surface-elevated/40 p-12 text-center text-muted-ink text-sm">
+                    No active participant conversations yet. Messages sent by participants will appear here.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-line rounded-xl border border-line bg-surface-elevated/30 overflow-hidden">
+                    {conversations.map((conv) => (
+                      <div
+                        key={conv.caseId}
+                        onClick={() => onViewCase(conv.caseId)}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 hover:bg-surface-elevated/70 transition cursor-pointer"
+                      >
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand font-bold text-xs mt-0.5">
+                            {conv.victimName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-ink">{conv.victimName}</span>
+                              <span className="text-[11px] font-mono text-muted-ink">{conv.caseNumber}</span>
+                              <SoftBadge tone="uncertain">{conv.district}</SoftBadge>
+                              {conv.unreadCount > 0 && (
+                                <span className="rounded-full bg-priority px-2 py-0.5 text-[10px] font-bold text-white">
+                                  {conv.unreadCount} new
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-xs text-muted-ink line-clamp-1">
+                              {conv.lastSenderRole === "professional" && <span className="font-semibold text-ink">You: </span>}
+                              {conv.lastMessageBody ?? "No messages yet"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                          <span className="text-[11px] text-muted-ink">
+                            {conv.lastMessageAt ? new Date(conv.lastMessageAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                          </span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onViewCase(conv.caseId); }}
+                            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand/90 transition"
+                          >
+                            Open chat
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[22px] border border-line bg-surface p-5 shadow-soft backdrop-blur-md">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-xs font-bold uppercase tracking-[0.12em] text-muted-ink">
+                  {queueTab === "my" ? "My assigned cases" : queueTab === "unassigned" ? "Unassigned cases" : "Open SOS requests"}
+                </div>
+                <SoftBadge tone="attention">Human review required</SoftBadge>
+              </div>
+
+              {filteredQueue.length === 0 ? (
+                <div className="flex flex-col items-center py-12 text-center">
+                  <CheckCircle2 className="size-8 text-improving mb-2" />
+                  <p className="text-sm font-semibold text-ink">
+                    {queue.length === 0 ? "No cases in this queue yet" : "No cases match your filters"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-ink">
+                    {queue.length === 0
+                      ? queueTab === "unassigned" ? "All cases have been assigned." : "No cases are currently assigned to you."
+                      : "Try adjusting your search or filter."}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredQueue.map((item) => (
+                    <div key={item.caseId} className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-line bg-surface-elevated/60 px-4 py-3 transition hover:border-brand/30 hover:bg-brand-soft/10">
+                      {/* Avatar */}
+                      <div className={`grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold ${
+                        item.alertSeverity === "priority" ? "bg-priority/15 text-priority"
+                        : item.alertSeverity === "attention" ? "bg-attention/15 text-attention"
+                        : "bg-improving/15 text-improving"
+                      }`}>{item.initials}</div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-bold text-ink">{item.caseNumber}</span>
+                          <span className="text-xs text-muted-ink">{item.district}</span>
+                          {item.alertSeverity && (
+                            <SoftBadge tone={item.alertSeverity as any}>{item.alertSeverity}</SoftBadge>
+                          )}
+                          {item.crisisFlag && (
+                            <SoftBadge tone="priority">Crisis flag</SoftBadge>
+                          )}
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-ink">
+                          {item.latestMood && <span>Mood: <strong className="text-ink">{item.latestMood}</strong></span>}
+                          {item.latestScore !== null && <span>Score: <strong className="text-ink">{item.latestScore}</strong></span>}
+                          {item.latestTrend && <span>Trend: <strong className="text-ink">{item.latestTrend}</strong></span>}
+                          <span className="flex items-center gap-1">
+                            <Clock className="size-3" />{formatMinutesAgo(item.minutesSinceCheckin)}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 text-xs text-muted-ink">Stage: {item.stage}</div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-line/50">
+                        {item.alertSeverity && <StatusIcon tone={item.alertSeverity} />}
+
+                        {queueTab === "unassigned" ? (
+                          <button
+                            id={`claim-case-${item.caseId}`}
+                            disabled={claimingId === item.caseId}
+                            onClick={() => handleClaimCase(item.caseId)}
+                            className="flex items-center gap-1.5 shrink-0 rounded-xl bg-brand px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-brand/90 disabled:opacity-50"
+                          >
+                            {claimingId === item.caseId
+                              ? <span className="size-3 animate-spin rounded-full border border-white border-t-transparent" />
+                              : <UserPlus className="size-3.5" />}
+                            Claim case
+                          </button>
+                        ) : (
+                          <button
+                            id={`review-case-${item.caseId}`}
+                            onClick={() => onViewCase(item.caseId)}
+                            className="flex items-center gap-1.5 shrink-0 rounded-xl bg-brand-soft px-3.5 py-1.5 text-xs font-bold text-brand transition hover:bg-brand/10"
+                          >
+                            <Eye className="size-3.5" />
+                            Review
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

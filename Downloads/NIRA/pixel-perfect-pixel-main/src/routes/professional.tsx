@@ -63,7 +63,10 @@ function ProfessionalApp() {
           caseId={reviewCaseId}
           userId={data.userId}
           userName={data.name}
-          onBack={() => setView("home")}
+          onBack={() => {
+            setReviewCaseId(null);
+            setView("home");
+          }}
         />
       );
     }
@@ -71,6 +74,8 @@ function ProfessionalApp() {
       <ProfessionalHome
         userId={data.userId}
         userName={data.name}
+        activeView={view}
+        onViewChange={setView}
         onViewCase={handleViewCase}
       />
     );
