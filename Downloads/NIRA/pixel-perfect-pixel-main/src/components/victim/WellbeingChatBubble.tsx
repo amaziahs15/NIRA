@@ -197,6 +197,7 @@ export function WellbeingChatView({
   atCap,
   onSend,
   onExpand,
+  onMessagesChange,
   compact = false,
 }: {
   lang: string;
@@ -206,6 +207,7 @@ export function WellbeingChatView({
   atCap: boolean;
   onSend: (text: string) => void;
   onExpand?: () => void;
+  onMessagesChange?: (msgs: ChatMsg[]) => void;
   compact?: boolean;
 }) {
   const [input, setInput] = useState("");
@@ -342,8 +344,8 @@ export function WellbeingChatView({
   const hasCrisis = messages.some((m) => m.isCrisis);
 
   const handleCopyChat = () => {
-    const text = displayMessages
-      .map((m) => `${m.role === "user" ? "You" : "NIRA"} (${m.timestamp || ""}):\n${m.content}`)
+    const text = messages
+      .map((m: ChatMsg) => `${m.role === "user" ? "You" : "NIRA"} (${m.timestamp || ""}):\n${m.content}`)
       .join("\n\n");
     navigator.clipboard.writeText(text);
     toast.success("Conversation copied to clipboard.");
@@ -425,7 +427,7 @@ export function WellbeingChatView({
 
       {/* Messages */}
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {displayMessages.map((msg) => (
+        {messages.map((msg: ChatMsg) => (
           <MessageBubble
             key={msg.id}
             msg={msg}
@@ -447,7 +449,7 @@ export function WellbeingChatView({
       )}
 
       {/* Suggested Quick Replies */}
-      {!atCap && !loading && !input.trim() && displayMessages.length < 6 && (
+      {!atCap && !loading && !input.trim() && messages.length < 6 && (
         <div className="flex flex-wrap gap-1.5 px-3 py-2 border-t border-border/60 bg-surface/60">
           {quickReplies.map((qr, i) => (
             <button
@@ -636,6 +638,7 @@ export function WellbeingChatBubble({
             atCap={atCap}
             onSend={sendMessage}
             onExpand={onExpand}
+            onMessagesChange={onMessagesChange}
             compact
           />
         </div>

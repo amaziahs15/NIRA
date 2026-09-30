@@ -127,6 +127,7 @@ export default function VictimChat({ data, lang, onBack, initialMessages, onMess
           loading={loading}
           atCap={atCap}
           onSend={sendMessage}
+          onMessagesChange={onMessagesChange}
           compact={false}
         />
       </div>
